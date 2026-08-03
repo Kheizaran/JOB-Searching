@@ -17,9 +17,13 @@ style preferences; they are what keeps the output usable and the accounts alive.
    line prepares searches and messages; the person runs them in their browser.
 5. **Rate-limit and cache every source.** Six-hour disk cache, descriptive
    User-Agent, back off on 429.
-6. **Secrets come from `.env`.** Only `.env.example` is committed. `preferences.json`
-   and `resume.md` are personal and gitignored; the `*.example.*` files are the
-   committed templates.
+6. **Secrets come from `.env`.** Only `.env.example` is committed. `preferences.json`,
+   `resume.md` and `snippets.json` are personal and gitignored; the `*.example.*`
+   files are the committed templates.
+7. **Setup stays local.** `agent/setup.py` binds to 127.0.0.1 and nothing else.
+   A resume is read on the user's disk and written back to their disk; the only
+   thing that ever leaves is the resume text going to Claude to be restructured.
+   Do not add uploads, analytics, or a hosted mode without the user asking for it.
 
 ## Shape of the code
 

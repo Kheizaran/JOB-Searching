@@ -275,13 +275,13 @@ const STOPS = [
   },
   { id:"s2", line:"setup", code:"00.2",
     title:{en:"Profile: resume + preferences", fa:"پروفایل: رزومه و ترجیحات"},
-    blurb:{en:"Your master resume and your filters, as data the agent can read.", fa:"رزومه اصلی و فیلترهایتان، به شکل داده‌ای که ایجنت بخواند."},
-    files:["agent/config/resume.example.md","agent/config/preferences.example.json"],
+    blurb:{en:"A setup page that takes a resume upload and asks the rest.", fa:"صفحه راه‌اندازی: رزومه را می‌گیرد و بقیه را می‌پرسد."},
+    files:["agent/setup.py","web/setup.html","agent/jobsearch/intake.py"],
     check:{
-      en:["Master resume in Markdown, one section per role, every bullet true","preferences.json holds titles, locations, remote, seniority, visa, salary floor, hard excludes","A short 'story bank' of achievements the tailor can pull from"],
-      fa:["رزومه اصلی به Markdown، برای هر نقش یک بخش، همه بولت‌ها واقعی","در preferences.json: عنوان‌ها، شهرها، دورکاری، سطح، ویزا، حداقل حقوق، موارد رد","یک «بانک دستاورد» کوتاه که ماژول رزومه از آن بردارد"]
+      en:["`python3 -m agent.setup` opens a page that reads a PDF, DOCX or pasted resume","It writes resume.md, preferences.json and snippets.json — all gitignored","The story bank is extracted for you, and bullets with no number are flagged"],
+      fa:["دستور `python3 -m agent.setup` صفحه‌ای باز می‌کند که PDF، DOCX یا متن رزومه را می‌خواند","خروجی: resume.md و preferences.json و snippets.json — همه در گیت‌ایگنور","بانک دستاورد خودکار ساخته می‌شود و بولت‌های بدون عدد علامت می‌خورند"]
     },
-    prompt:"Read my resume file and turn it into agent/config/resume.md: a structured Markdown master resume with stable section ids, plus a 'story bank' section of 10-15 achievement bullets with metrics. Then interview me with a handful of questions and write agent/config/preferences.json capturing: target titles, seniority, locations + remote policy, work authorisation, salary floor, industries to exclude, company sizes, and keywords that should auto-reject a posting."
+    prompt:"Build the onboarding so someone who has never opened a terminal can use this. `python3 -m agent.setup` starts a localhost-only server and opens web/setup.html: a resume drop zone (PDF via pdftotext or pypdf, DOCX via zipfile, Markdown, plain text, or pasted text), then one screen of questions — target titles, level, locations, remote, work authorisation, salary floor and expectation, notice period, deal-breakers, company boards. On submit it structures the resume into agent/config/resume.md with a story bank, writes preferences.json and snippets.json, backs up anything it replaces, and lists the achievements that have no number in them. Add a --cli flag that asks the same questions in the terminal."
   },
   { id:"s3", line:"setup", code:"00.3",
     title:{en:"The tracker", fa:"دیتابیس پیگیری"},

@@ -5,6 +5,7 @@ diagram: four services leaving one interchange. Click a stop and you get what it
 does, how you know it's finished, and the prompt that builds it in Claude Code.
 
     web/index.html      the map — open it in a browser, no build step, no server
+    web/setup.html      the setup page: upload a resume, answer the questions
     agent/              the pipeline the map describes
 
 Open the map: `open web/index.html` (or `python3 -m http.server` and visit `/web/`).
@@ -50,23 +51,35 @@ before closing itself out.
 ## Make it yours
 
 ```bash
-cp .env.example .env                                        # add ANTHROPIC_API_KEY
-cp agent/config/preferences.example.json agent/config/preferences.json
-cp agent/config/resume.example.md        agent/config/resume.md
-cp agent/config/snippets.example.json    agent/config/snippets.json
 pip install -r requirements.txt
-python3 -m agent.run_daily
+cp .env.example .env          # add ANTHROPIC_API_KEY
+python3 -m agent.setup        # opens the setup page in your browser
 ```
 
-Both real config files are gitignored — your resume and your salary floor never
-reach the repo. Edit `preferences.json` first: `target_titles`, `locations`,
-`score_threshold`, and the `sources` list (Greenhouse / Lever / Ashby board names
-for the companies you actually want, plus RemoteOK as a wide net).
+The setup page takes your resume — PDF, Word, Markdown, plain text, or pasted —
+and asks the rest: titles you want, cities, remote or not, work authorisation,
+salary floor, notice period, deal-breakers, which company boards to watch. It
+writes three files for you:
 
-In `resume.md`, the section that matters most is **`## Story bank`**. It is the
-only place the tailoring step is allowed to take achievements from. Ten to fifteen
-true bullets with real numbers there produce better tailored resumes than a
-beautifully formatted CV.
+    agent/config/resume.md          your resume, structured, with a story bank
+    agent/config/preferences.json   what to search for and what to reject
+    agent/config/snippets.json      the answers you give on every form
+
+All three are gitignored — your resume and your salary floor never reach the repo.
+Prefer the terminal? `python3 -m agent.setup --cli` asks the same questions there.
+Nothing is uploaded: the page is served by a program on your own machine, bound to
+127.0.0.1, and your resume text goes to Claude only, only to be restructured.
+
+The part worth your attention afterwards is **`## Story bank`** in `resume.md`.
+It is the only place the tailoring step may take achievements from, so setup
+flags every bullet that has no number in it. Ten to fifteen true bullets with real
+numbers there produce better tailored resumes than a beautifully formatted CV.
+
+Then:
+
+```bash
+python3 -m agent.run_daily
+```
 
 ## Run it every morning
 
@@ -103,14 +116,36 @@ Good first changes: swap the `sources` list for the companies you actually want
 and rewrite the `## Story bank` in your own resume until every line has a number in
 it (00.2). That last one improves the output of everything downstream.
 
+## Sharing it with someone else
+
+Send them the repo. Each person runs it on their own machine, with their own API
+key, and their own `agent/config/` — there is no shared server, no account, and
+nobody's resume is ever visible to anybody else. What they need from you is one
+line:
+
+```bash
+git clone <this repo> && cd JOB-Searching && pip install -r requirements.txt && python3 -m agent.setup
+```
+
+Setup is bilingual (English / فارسی, top right), so is the map, and both work
+without an API key — with a key the resume gets properly structured, without one
+it is copied through as-is so they can still see the whole thing run.
+
+Two things worth telling them, because the tool will not bend on either: it never
+submits an application for them, and it never claims experience they do not have.
+
 ---
 
 ## خلاصه فارسی
 
-نقشه‌ی `web/index.html` را در مرورگر باز کنید و زبان را روی فارسی بگذارید. چهار خط
-دارد: پیداکردن آگهی، بازنویسی رزومه، اپلای با تأیید انسانی، و رسیدن به مدیر استخدام.
-روی هر ایستگاه بزنید تا پرامپت ساختش را بگیرید و در Claude Code داخل همین مخزن
-اجرا کنید. برای دیدن کل خط لوله بدون هیچ کلید API:
+برای شروع، `python3 -m agent.setup` را اجرا کنید: صفحه‌ای در مرورگر باز می‌شود که
+رزومه‌تان را می‌گیرد (PDF، Word، یا متن) و چند سؤال می‌پرسد — عنوان شغلی، شهر،
+دورکاری، مجوز کار، حداقل حقوق. همه‌چیز روی کامپیوتر خودتان می‌ماند.
+
+نقشه‌ی `web/index.html` را هم در مرورگر باز کنید و زبان را روی فارسی بگذارید. چهار
+خط دارد: پیداکردن آگهی، بازنویسی رزومه، اپلای با تأیید انسانی، و رسیدن به مدیر
+استخدام. روی هر ایستگاه بزنید تا پرامپت ساختش را بگیرید و در Claude Code داخل همین
+مخزن اجرا کنید. برای دیدن کل خط لوله بدون هیچ کلید API:
 `python3 -m agent.run_daily --dry-run`.
 
 قانونی که تغییر نمی‌کند: ایجنت آماده می‌کند، شما تأیید می‌کنید. هیچ اپلیکیشن یا

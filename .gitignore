@@ -3,6 +3,7 @@
 agent/config/preferences.json
 agent/config/resume.md
 agent/config/snippets.json
+agent/config/*.bak
 data/connections.csv
 
 # generated
