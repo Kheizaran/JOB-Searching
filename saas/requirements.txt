@@ -1,0 +1,6 @@
+# The web layer. The agent itself still needs only requirements.txt at the root.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9    # file uploads
+cryptography>=42           # encrypts each user's API key at rest
+anthropic>=0.40

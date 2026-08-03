@@ -14,7 +14,7 @@ import traceback
 from datetime import date
 
 from agent.jobsearch import digest, followup, llm, scrape, score, store
-from agent.jobsearch.config import LOGS_DIR
+from agent.jobsearch.config import logs_dir
 
 STAGES = [
     ("scrape", scrape.run),
@@ -36,8 +36,9 @@ def main() -> int:
         return 0
 
     llm.set_offline(args.dry_run)
-    LOGS_DIR.mkdir(parents=True, exist_ok=True)
-    log = LOGS_DIR / f"{date.today().isoformat()}.log"
+    log_dir = logs_dir()
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log = log_dir / f"{date.today().isoformat()}.log"
     failures = []
 
     with log.open("a") as fh:

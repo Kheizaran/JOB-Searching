@@ -13,7 +13,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
-DB_PATH = Path(__file__).resolve().parents[2] / "data" / "tracker.db"
+from .workspace import tracker_path
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS jobs (
@@ -82,7 +82,7 @@ def job_id(source: str, external_id: str) -> str:
 
 
 def connect(path: Path | None = None) -> sqlite3.Connection:
-    path = path or DB_PATH
+    path = path or tracker_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row

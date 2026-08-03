@@ -18,7 +18,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 from agent.jobsearch import intake, llm
-from agent.jobsearch.config import CONFIG_DIR, ROOT
+from agent.jobsearch.config import ROOT, config_dir
 
 PAGE = ROOT / "web" / "setup.html"
 MAX_UPLOAD = 8 * 1024 * 1024
@@ -60,7 +60,7 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/api/status":
             self._json(200, {
                 "configured": [n for n in ("resume.md", "preferences.json", "snippets.json")
-                               if (CONFIG_DIR / n).exists()],
+                               if (config_dir() / n).exists()],
                 "has_key": llm.available(),
             })
         else:

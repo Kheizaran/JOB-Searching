@@ -14,7 +14,7 @@ import json
 from datetime import date, datetime, timedelta, timezone
 
 from . import llm, store
-from .config import DATA_DIR, load_preferences
+from .config import data_dir, load_preferences
 
 APP_SYSTEM = """Write a short follow-up on a job application that has had no reply.
 Four sentences maximum. Reference something specific about the role, add one piece
@@ -128,7 +128,7 @@ def run(**_) -> dict:
         )
 
     today = date.today().isoformat()
-    out_dir = DATA_DIR / "followups"
+    out_dir = data_dir() / "followups"
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / f"{today}.md"
     lines = [f"# Follow-ups to send — {today}", ""]

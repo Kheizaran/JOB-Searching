@@ -13,7 +13,7 @@ import urllib.parse
 from pathlib import Path
 
 from . import llm, store
-from .config import DATA_DIR, application_dir, load_preferences
+from .config import application_dir, data_dir, load_preferences
 
 TITLE_SYSTEM = """Given a job posting, infer who owns the hiring decision.
 Return JSON: {"manager_titles": ["2-4 likely titles of the hiring manager"],
@@ -173,7 +173,7 @@ def referrals(job_ref: str, csv_path: str | None = None) -> list[dict]:
     """
     import csv
 
-    path = Path(csv_path) if csv_path else DATA_DIR / "connections.csv"
+    path = Path(csv_path) if csv_path else data_dir() / "connections.csv"
     if not path.exists():
         raise SystemExit(f"No connections export at {path} — see the docstring for how to get it")
 

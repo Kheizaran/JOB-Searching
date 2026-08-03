@@ -22,7 +22,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-CACHE_DIR = Path(__file__).resolve().parents[2] / "data" / "cache"
+from .workspace import ROOT, data_dir
+
+
 CACHE_TTL = 6 * 3600
 USER_AGENT = "job-search-agent (personal job search; contact: set JOBSEARCH_CONTACT)"
 
@@ -39,9 +41,10 @@ def source(name: str):
 
 def fetch_json(url: str, *, ttl: int = CACHE_TTL) -> Any:
     """GET with a 6-hour disk cache and a polite backoff on 429."""
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cache_dir = data_dir() / "cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
     key = urllib.parse.quote(url, safe="")[:180]
-    cached = CACHE_DIR / f"{key}.json"
+    cached = cache_dir / f"{key}.json"
     if cached.exists() and time.time() - cached.stat().st_mtime < ttl:
         return json.loads(cached.read_text())
 
@@ -157,8 +160,7 @@ def remoteok(**_) -> list[dict[str, Any]]:
 @source("fixtures")
 def fixtures(path: str = "agent/fixtures/jobs.json", **_) -> list[dict[str, Any]]:
     """Offline source used by --dry-run so the pipeline runs with no network."""
-    root = Path(__file__).resolve().parents[2]
-    return json.loads((root / path).read_text())
+    return json.loads((ROOT / path).read_text())
 
 
 def _html_to_text(html: str) -> str:

@@ -17,7 +17,7 @@ from io import BytesIO
 from pathlib import Path
 
 from . import llm
-from .config import CONFIG_DIR
+from .config import config_dir
 
 SUPPORTED = (".pdf", ".docx", ".md", ".txt", ".rtf")
 
@@ -163,14 +163,15 @@ def write_profile(resume_text: str, answers: dict, overwrite: bool = False) -> d
         "snippets.json": json.dumps(build_snippets(answers, profile), ensure_ascii=False, indent=2),
     }
 
-    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    existing = [n for n in files if (CONFIG_DIR / n).exists()]
+    target = config_dir()
+    target.mkdir(parents=True, exist_ok=True)
+    existing = [n for n in files if (target / n).exists()]
     if existing and not overwrite:
         return {"needs_confirmation": True, "existing": existing}
 
     written, backups = [], []
     for name, content in files.items():
-        path = CONFIG_DIR / name
+        path = target / name
         if path.exists():
             backup = path.with_suffix(path.suffix + ".bak")
             shutil.copy2(path, backup)

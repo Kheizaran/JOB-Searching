@@ -11,7 +11,7 @@ import json
 from datetime import date
 
 from . import store
-from .config import DIGESTS_DIR, load_preferences
+from .config import digests_dir, load_preferences
 
 
 def build(limit: int = 10) -> str:
@@ -53,8 +53,9 @@ def build(limit: int = 10) -> str:
                 "",
             ]
 
-    DIGESTS_DIR.mkdir(parents=True, exist_ok=True)
-    path = DIGESTS_DIR / f"{today}.md"
+    out_dir = digests_dir()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / f"{today}.md"
     path.write_text("\n".join(out))
     return str(path)
 

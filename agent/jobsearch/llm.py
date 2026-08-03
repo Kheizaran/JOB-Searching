@@ -10,13 +10,19 @@ from __future__ import annotations
 import json
 import os
 import time
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Any
 
 MODEL_FAST = os.environ.get("JOBSEARCH_MODEL_FAST", "claude-haiku-4-5-20251001")
 MODEL_MAIN = os.environ.get("JOBSEARCH_MODEL_MAIN", "claude-sonnet-5")
 
-_client = None
+_clients: dict[str, Any] = {}
 _offline = False
+
+# The CLI uses one key from the environment. The SaaS runs each user's work
+# under their own key, so it lives in a ContextVar rather than a global.
+_api_key: ContextVar[str | None] = ContextVar("anthropic_api_key", default=None)
 
 
 def set_offline(value: bool) -> None:
@@ -25,17 +31,31 @@ def set_offline(value: bool) -> None:
     _offline = value
 
 
+@contextmanager
+def use_key(key: str | None):
+    """Run a block with one user's API key."""
+    token = _api_key.set(key)
+    try:
+        yield
+    finally:
+        _api_key.reset(token)
+
+
+def current_key() -> str | None:
+    return _api_key.get() or os.environ.get("ANTHROPIC_API_KEY") or None
+
+
 def available() -> bool:
-    return not _offline and bool(os.environ.get("ANTHROPIC_API_KEY"))
+    return not _offline and bool(current_key())
 
 
 def _get_client():
-    global _client
-    if _client is None:
+    key = current_key()
+    if key not in _clients:
         from anthropic import Anthropic  # imported lazily so --dry-run needs no deps
 
-        _client = Anthropic()
-    return _client
+        _clients[key] = Anthropic(api_key=key)
+    return _clients[key]
 
 
 def json_call(
