@@ -46,7 +46,8 @@ only reachable through their own SQLite file.
 | `/run` | Run the search now |
 | `/jobs/{id}` | Verdict, evidence map, resume diff, letter, screening answers |
 | `/jobs/{id}/approve`, `/prepare`, `/submitted` | The approve → tailor → applied path |
-| `/settings` | API key, daily run on/off, delete everything |
+| `/settings` | API key, daily run and daily email on/off, test send, delete everything |
+| `/email/unsubscribe` | One click, no login — the only thing the token can do |
 
 Tested end to end with FastAPI's test client: signup → onboarding → run → approve
 → tailor produces a real diff, letter and answers; a second user cannot see the
@@ -73,9 +74,9 @@ to hydrate, one language end to end.
 
 Before real users, in rough order:
 
-1. **Email.** No verification, no password reset, no daily digest in the inbox.
-   A digest email is probably the product's real surface — most people will never
-   open a dashboard daily, but they will read an email.
+1. **Email verification and password reset.** The daily digest ships (below), but
+   nothing confirms an address at signup and there is no way back into a locked
+   account. Verification also protects your sending reputation.
 2. **Rate limiting and abuse controls.** Nothing stops signup spam or a script
    hammering `/run`.
 3. **Background jobs.** `/run` executes inside the request. Fine for a demo,
@@ -90,6 +91,31 @@ Before real users, in rough order:
 7. **Payments.** Note that Stripe and Paddle do not serve Iran; if your first
    users pay in rials this goes through a local gateway and changes both the
    billing code and where you can host.
+
+## The daily email
+
+The digest is the product for most users — a dashboard people must remember to
+visit gets visited twice. `saas/mail.py` builds it, `saas/worker.py` sends it
+after each successful run, and it carries:
+
+- the roles that cleared the threshold, scored, with the verdict and the gaps
+- a count of follow-ups waiting
+- a plain-text alternative alongside the HTML, which matters for deliverability
+- `List-Unsubscribe` and `List-Unsubscribe-Post` headers, which Gmail and Yahoo
+  require from bulk senders, pointing at a one-click link that needs no login
+
+Sending is stdlib SMTP, so any provider works:
+
+    SMTP_HOST=… SMTP_PORT=587 SMTP_USER=… SMTP_PASSWORD=…
+    MAIL_FROM="Job Radar <hello@yourdomain>" APP_URL=https://yourdomain
+
+With no SMTP configured, messages are written to `data/saas/outbox/*.eml` instead
+of sent — the whole path is testable offline, and "Send me one now" in settings
+tells you which of the two happened.
+
+Before you send to real inboxes: set up SPF, DKIM and DMARC on the sending
+domain. Without them a daily mail from a new domain lands in spam, and the
+product silently stops existing for the people who signed up.
 
 ## The uncomfortable part
 

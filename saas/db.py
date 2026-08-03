@@ -55,12 +55,25 @@ def now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+# Columns added after the first release. Migrations stay additive so an older
+# database keeps working — never drop or rename in place.
+MIGRATIONS = [
+    ("users", "daily_email", "INTEGER NOT NULL DEFAULT 1"),
+    ("users", "last_email_at", "TEXT"),
+]
+
+
 def connect() -> sqlite3.Connection:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.executescript(SCHEMA)
+    for table, column, spec in MIGRATIONS:
+        columns = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+        if column not in columns:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {spec}")
+    conn.commit()
     return conn
 
 

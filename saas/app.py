@@ -21,7 +21,7 @@ from agent.jobsearch import digest, intake, llm, review, scrape, score, store, t
 from agent.jobsearch.config import application_dir
 from agent.jobsearch.workspace import workspace
 
-from . import db, security, ui
+from . import db, mail, security, ui
 
 app = FastAPI(title="Job Radar", docs_url=None, redoc_url=None)
 COOKIE = "jr_session"
@@ -316,6 +316,50 @@ def save_daily(user=Depends(require_user), daily_enabled: str = Form("")):
     key = user_key(user)
     return html(ui.settings(user, security.key_hint(key) if key else None,
                             message="Saved." if user["daily_enabled"] else "Daily search paused."))
+
+
+@app.post("/settings/email")
+def save_email_pref(user=Depends(require_user), daily_email: str = Form("")):
+    with db.connect() as conn:
+        db.update_user(conn, user["id"], daily_email=1 if daily_email else 0)
+        user = db.user_by_id(conn, user["id"])
+    key = user_key(user)
+    return html(ui.settings(user, security.key_hint(key) if key else None,
+                            message="Daily email on." if user["daily_email"]
+                                    else "Daily email off — the dashboard still updates."))
+
+
+@app.post("/email/test")
+def send_test_email(user=Depends(require_user)):
+    try:
+        jobs, followups = mail.collect_digest(user)
+        result = mail.send_digest(user, jobs, followups)
+    except Exception as exc:
+        key = user_key(user)
+        return html(ui.settings(user, security.key_hint(key) if key else None,
+                                error=f"Could not send: {exc}"))
+    key = user_key(user)
+    note = (f"Sent to {user['email']}." if mail.configured()
+            else f"No SMTP configured, so it was {result} — open it to see what users receive.")
+    return html(ui.settings(user, security.key_hint(key) if key else None, message=note))
+
+
+@app.get("/email/unsubscribe", response_class=HTMLResponse)
+def unsubscribe(token: str = ""):
+    """Reachable without signing in — an unsubscribe link that needs a login is
+    not an unsubscribe link. The token turns email off and nothing else."""
+    user_id = security.read_email_token(token)
+    if not user_id:
+        return html(ui.simple_page("That link is not valid",
+                                   "Change it in your settings instead."))
+    with db.connect() as conn:
+        user = db.user_by_id(conn, user_id)
+        if user:
+            db.update_user(conn, user_id, daily_email=0)
+    return html(ui.simple_page(
+        "You will not get the daily email again.",
+        "Your shortlist still updates in the dashboard, and you can turn the email "
+        "back on in settings whenever you want."))
 
 
 @app.post("/account/delete")

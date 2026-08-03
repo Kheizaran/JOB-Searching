@@ -16,7 +16,7 @@ import traceback
 from agent.jobsearch import digest, llm, scrape, score
 from agent.jobsearch.workspace import workspace
 
-from . import db, security
+from . import db, mail, security
 
 
 def run_for(user) -> tuple[str, str]:
@@ -53,6 +53,15 @@ def main() -> int:
             run_id = db.start_run(conn, user["id"])
         status, detail = run_for(user)
         failures += status == "failed"
+
+        if status == "ok" and user["daily_email"]:
+            try:
+                jobs, followups = mail.collect_digest(user)
+                detail += f" · email {mail.send_digest(user, jobs, followups)}"
+                with db.connect() as conn:
+                    db.update_user(conn, user["id"], last_email_at=db.now())
+            except Exception as exc:
+                detail += f" · email failed: {exc}"
         with db.connect() as conn:
             db.finish_run(conn, run_id, user["id"], status, detail)
         print(f"  {user['email']:<34} {status:<8} {detail.splitlines()[-1][:70] if detail else ''}")

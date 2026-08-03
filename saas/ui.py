@@ -330,6 +330,19 @@ def settings(user, key_hint: str | None, message: str = "", error: str = "") -> 
   </form>
 </div>
 <div class="card">
+  <p class="eyebrow">The daily email</p>
+  <p class="lede">One email each morning with the roles that cleared your threshold — the part
+  most people actually use. Every message carries a one-click unsubscribe.</p>
+  <form method="post" action="/settings/email">
+    <label><input type="checkbox" name="daily_email" value="1"
+      {'checked' if user['daily_email'] else ''}> Email me the shortlist every morning</label>
+    <div style="margin-top:12px" class="row"><button class="btn" type="submit">Save</button></div>
+  </form>
+  <form method="post" action="/email/test" style="margin-top:10px">
+    <button class="btn btn-sm" type="submit">Send me one now</button>
+  </form>
+</div>
+<div class="card">
   <p class="eyebrow">Delete everything</p>
   <p class="lede">Your account row, your resume, your tracker and every document generated for
   you. Immediate and irreversible — no soft delete, no backup we keep.</p>
@@ -340,3 +353,9 @@ def settings(user, key_hint: str | None, message: str = "", error: str = "") -> 
     <button class="btn btn-danger" type="submit">Delete my account</button>
   </form>
 </div>""", user=user, message=message, error=error)
+
+
+def simple_page(title: str, body: str) -> str:
+    """For pages reached from an email, where nobody is signed in."""
+    return layout(title, f'<h1>{e(title)}</h1><p class="lede">{e(body)}</p>'
+                         f'<a class="btn" href="/login">Sign in</a>')

@@ -76,6 +76,24 @@ def key_hint(api_key: str) -> str:
     return f"{api_key[:11]}…{api_key[-4:]}" if len(api_key) > 18 else "set"
 
 
+# ---------- email links ----------
+
+def email_token(user_id: str) -> str:
+    """A signed, non-expiring id for links we put in email — unsubscribe only.
+    It carries no session and grants nothing except turning email off."""
+    sig = hmac.new(_secret(), f"email:{user_id}".encode(), hashlib.sha256).hexdigest()[:32]
+    return f"{user_id}.{sig}"
+
+
+def read_email_token(token: str) -> str | None:
+    try:
+        user_id, sig = token.split(".", 1)
+    except ValueError:
+        return None
+    expected = hmac.new(_secret(), f"email:{user_id}".encode(), hashlib.sha256).hexdigest()[:32]
+    return user_id if hmac.compare_digest(sig, expected) else None
+
+
 # ---------- sessions ----------
 
 def new_session_token() -> str:
