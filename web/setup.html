@@ -112,6 +112,9 @@ fieldset legend{
   font-family:var(--mono);font-size:13px;
 }
 .callout{border-left:3px solid var(--warn);background:var(--surface-2);border-radius:0 7px 7px 0;padding:11px 13px;margin-top:16px;font-size:13.5px}
+.callout.preview[hidden]{display:none}
+.callout.preview{border-left-color:var(--accent-2);margin-top:20px}
+.callout.preview .cmd{margin-top:10px}
 .callout ul{margin:8px 0 0;padding-left:18px}
 .callout li{font-family:var(--sans);font-size:13px;color:var(--ink-2)}
 .privacy{margin-top:26px;font-size:12.5px;color:var(--ink-3);line-height:1.6}
@@ -136,6 +139,12 @@ fieldset legend{
     </div>
   </header>
   <p class="lede" data-i18n="lede">Your resume and answers stay on this computer. Three minutes, and the agent knows what to look for and what you can honestly claim.</p>
+
+  <div class="callout preview" id="preview" hidden>
+    <strong data-i18n="previewTitle">This is the hosted preview.</strong>
+    <p data-i18n="previewBody" style="margin:6px 0 0"></p>
+    <div class="cmd" id="previewCmd"><span>python3 -m agent.setup</span></div>
+  </div>
 
   <form id="form">
     <!-- 1 ------------------------------------------------------------ -->
@@ -288,6 +297,10 @@ const T = {
     fRemoteok:"Also search RemoteOK", fThreshold:"Only show me matches above",
     fThresholdSub:"Out of 100. Raise it when the digest gets long.", fPortfolio:"Portfolio or site",
     submit:"Create my profile", working:"Reading your resume…",
+    previewTitle:"This is the hosted preview.",
+    previewBody:"You can read the questions here, but this page cannot write files to your computer and nothing you type is saved. Setting up for real takes one command on your own machine, inside the repo:",
+    previewBlocked:"Nothing is saved from this preview — run the setup command on your own machine.",
+    previewUpload:"Reading a PDF or Word file needs the local app. Paste your text to look around.",
     s3:"You are set up",
     privacy:"Nothing here is uploaded to a server. The page is served by a program running on your own machine, your resume is written to agent/config/ on this disk, and it is listed in .gitignore so it never reaches GitHub. If you have set an ANTHROPIC_API_KEY, the text of your resume is sent to Claude — and only to Claude — to be restructured.",
     needFile:"Add your resume first — upload a file or paste the text.",
@@ -318,6 +331,10 @@ const T = {
     fRemoteok:"RemoteOK هم جست‌وجو شود", fThreshold:"فقط موارد بالاتر از",
     fThresholdSub:"از ۱۰۰. اگر فهرست روزانه طولانی شد، بالاترش ببرید.", fPortfolio:"نمونه‌کار یا سایت",
     submit:"پروفایلم را بساز", working:"در حال خواندن رزومه…",
+    previewTitle:"این فقط پیش‌نمایش آنلاین است.",
+    previewBody:"سؤال‌ها را اینجا می‌بینید، اما این صفحه نمی‌تواند روی کامپیوتر شما فایلی بنویسد و چیزی ذخیره نمی‌شود. راه‌اندازی واقعی با یک دستور، روی دستگاه خودتان و داخل همان مخزن انجام می‌شود:",
+    previewBlocked:"در پیش‌نمایش چیزی ذخیره نمی‌شود — دستور راه‌اندازی را روی کامپیوتر خودتان اجرا کنید.",
+    previewUpload:"خواندن PDF یا Word به برنامه محلی نیاز دارد. برای دیدن فرم، متن را جای‌گذاری کنید.",
     s3:"آماده‌اید",
     privacy:"هیچ‌چیز به سروری فرستاده نمی‌شود. این صفحه را برنامه‌ای روی کامپیوتر خودتان سرو می‌کند، رزومه در agent/config/ روی همین دیسک نوشته می‌شود و در .gitignore هست تا هرگز به گیت‌هاب نرود. اگر ANTHROPIC_API_KEY تنظیم کرده باشید، متن رزومه فقط برای ساختاردهی به Claude فرستاده می‌شود.",
     needFile:"اول رزومه را اضافه کنید — فایل بدهید یا متن را جای‌گذاری کنید.",
@@ -364,6 +381,7 @@ $("resumeText").addEventListener("input", e => { resumeText = e.target.value; })
 
 async function upload(file){
   fileState.className = "file-state show";
+  if(previewMode){ fileState.className = "file-state show bad"; fileState.textContent = t("previewUpload"); return; }
   fileState.textContent = t("working");
   try{
     const res = await fetch("/api/extract", {
@@ -395,6 +413,7 @@ function collect(){
 async function generate(overwrite){
   const err = $("error");
   err.className = "error";
+  if(previewMode){ err.className = "error show"; err.textContent = t("previewBlocked"); return; }
   if(!resumeText.trim()){ err.className = "error show"; err.textContent = t("needFile"); return; }
   if(!$("titles").value.trim()){ err.className = "error show"; err.textContent = t("needTitles"); return; }
 
@@ -466,13 +485,38 @@ function showResult(data){
   $("result").scrollIntoView({behavior:"smooth", block:"start"});
 }
 
-/* --- boot ---------------------------------------------------------- */
+/* --- boot ----------------------------------------------------------
+   The page is served two ways: by agent/setup.py on someone's own machine,
+   where the API exists and files get written — or as a static preview on a
+   host like Vercel, where there is no API and nothing can be saved. Say so
+   plainly rather than letting the buttons fail.                          */
+let previewMode = false;
+
+function enterPreviewMode(){
+  previewMode = true;
+  $("preview").hidden = false;
+  $("submit").disabled = true;
+  $("keyNote").textContent = "";
+  const copy = document.createElement("button");
+  copy.type = "button"; copy.className = "btn"; copy.textContent = t("copy");
+  copy.setAttribute("data-i18n", "copy");
+  copy.addEventListener("click", async () => {
+    try{ await navigator.clipboard.writeText("python3 -m agent.setup"); }catch(e){}
+    copy.textContent = t("copied");
+    setTimeout(() => copy.textContent = t("copy"), 1400);
+  });
+  $("previewCmd").append(copy);
+}
+
 applyLang();
-fetch("/api/status").then(r => r.json()).then(s => {
-  if(!s.has_key){
-    $("keyNote").textContent = "ANTHROPIC_API_KEY is not set — setup still works, with less structure.";
-  }
-}).catch(() => {});
+fetch("/api/status")
+  .then(r => r.ok ? r.json() : Promise.reject(new Error("no api")))
+  .then(s => {
+    if(!s.has_key){
+      $("keyNote").textContent = "ANTHROPIC_API_KEY is not set — setup still works, with less structure.";
+    }
+  })
+  .catch(enterPreviewMode);
 </script>
 </body>
 </html>

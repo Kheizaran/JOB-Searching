@@ -134,6 +134,34 @@ it is copied through as-is so they can still see the whole thing run.
 Two things worth telling them, because the tool will not bend on either: it never
 submits an application for them, and it never claims experience they do not have.
 
+### Putting the pages online (Vercel, Netlify, GitHub Pages)
+
+`vercel.json` deploys the two pages and nothing else:
+
+    /            the build map
+    /setup       the setup page, in preview mode
+
+That is deliberate, not a limitation to work around. The rest of this project
+cannot run on a serverless host, for reasons that are structural:
+
+- **Setup writes to your disk.** Its whole point is producing `agent/config/*` on
+  the machine that will run the agent. A serverless filesystem is read-only and
+  thrown away after each request, so a hosted copy has nowhere to put them.
+- **The daily run is a long job with state.** It needs a scheduler, a SQLite file
+  that survives between runs, and minutes of wall time — none of which a function
+  invocation has.
+- **Hosting it for other people means holding their resumes and their API keys.**
+  That is a different product with real obligations, not a deployment setting.
+
+So the deployed page detects that there is no local API behind it and says so:
+it shows the questions, disables saving, and gives the one command that does the
+real thing. Use the URL as a shop window — send people there to see what they are
+about to run, then they clone and run setup on their own machine.
+
+If you imported the repo through the Vercel dashboard before adding `vercel.json`,
+set **Framework Preset: Other** and redeploy; the config takes care of the rest
+(there is no build step and nothing to install).
+
 ---
 
 ## خلاصه فارسی
