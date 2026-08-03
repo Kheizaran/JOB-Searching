@@ -1,0 +1,772 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Job Search Agent — Build Map</title>
+<style>
+/* ---------------------------------------------------------------
+   Transit-map treatment: four service lines leaving one interchange.
+   Tokens first, components styled only through tokens.
+----------------------------------------------------------------*/
+:root{
+  --paper:#eef1f5;
+  --surface:#ffffff;
+  --surface-2:#e4e9ef;
+  --ink:#11141a;
+  --ink-2:#48515e;
+  --ink-3:#78828f;
+  --rule:#cdd5de;
+  --shadow:0 1px 2px rgba(17,20,26,.06), 0 8px 24px rgba(17,20,26,.07);
+
+  --l-setup:#59636f;
+  --l-radar:#0c7c77;
+  --l-forge:#b0521c;
+  --l-dispatch:#2a4fb8;
+  --l-bridge:#7a3b96;
+
+  --ok:#1a7f4b;
+  --focus:#2a4fb8;
+
+  --stop-w:174px;
+  --stop-gap:42px;
+  --spine:26px;
+
+  --sans:"Helvetica Neue",Helvetica,"Segoe UI",Roboto,Arial,ui-sans-serif,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#0e1116; --surface:#161a21; --surface-2:#1e242d;
+    --ink:#e8edf3; --ink-2:#a9b4c1; --ink-3:#7c8794; --rule:#2b323c;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+    --l-setup:#8b97a6; --l-radar:#2ab3ac; --l-forge:#e0813f;
+    --l-dispatch:#6188f0; --l-bridge:#b473d0;
+    --ok:#3fbb79; --focus:#6188f0;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0e1116; --surface:#161a21; --surface-2:#1e242d;
+  --ink:#e8edf3; --ink-2:#a9b4c1; --ink-3:#7c8794; --rule:#2b323c;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  --l-setup:#8b97a6; --l-radar:#2ab3ac; --l-forge:#e0813f;
+  --l-dispatch:#6188f0; --l-bridge:#b473d0;
+  --ok:#3fbb79; --focus:#6188f0;
+}
+:root[data-theme="light"]{
+  --paper:#eef1f5; --surface:#ffffff; --surface-2:#e4e9ef;
+  --ink:#11141a; --ink-2:#48515e; --ink-3:#78828f; --rule:#cdd5de;
+  --shadow:0 1px 2px rgba(17,20,26,.06), 0 8px 24px rgba(17,20,26,.07);
+  --l-setup:#59636f; --l-radar:#0c7c77; --l-forge:#b0521c;
+  --l-dispatch:#2a4fb8; --l-bridge:#7a3b96;
+  --ok:#1a7f4b; --focus:#2a4fb8;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:var(--sans);
+  font-size:16px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus); outline-offset:2px; border-radius:4px}
+
+/* ---------- shell ---------- */
+.shell{max-width:1560px;margin:0 auto;padding:24px 20px 64px}
+.topbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:20px 28px;margin-bottom:8px}
+.brand{display:flex;flex-direction:column;gap:6px;min-width:min(100%,420px);flex:1 1 340px}
+.eyebrow{
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:700;
+}
+h1{
+  margin:0;font-size:clamp(24px,3.2vw,36px);line-height:1.08;
+  letter-spacing:-.02em;font-weight:700;text-wrap:balance;
+}
+.tagline{margin:0;color:var(--ink-2);font-size:15px;max-width:62ch}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{
+  background:var(--surface);border:1px solid var(--rule);border-radius:6px;
+  padding:7px 12px;font-size:13px;cursor:pointer;box-shadow:var(--shadow);
+  transition:border-color .15s ease, transform .15s ease;
+}
+.btn:hover{border-color:var(--ink-3)}
+.btn:active{transform:translateY(1px)}
+.seg{display:flex;background:var(--surface);border:1px solid var(--rule);border-radius:6px;overflow:hidden;box-shadow:var(--shadow)}
+.seg button{background:none;border:0;padding:7px 12px;font-size:13px;cursor:pointer;color:var(--ink-2)}
+.seg button[aria-pressed="true"]{background:var(--surface-2);color:var(--ink);font-weight:700}
+
+/* ---------- progress strip ---------- */
+.meter{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  margin:18px 0 6px;padding:12px 16px;
+  background:var(--surface);border:1px solid var(--rule);border-radius:8px;box-shadow:var(--shadow);
+}
+.meter-count{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.meter-count span{color:var(--ink-3);font-weight:400}
+.bars{display:flex;gap:14px;flex-wrap:wrap;flex:1}
+.bar{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+.bar .track{width:78px;height:5px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.bar .fill{display:block;height:100%;border-radius:99px;background:var(--line);transition:width .3s ease}
+.bar .dot{width:9px;height:9px;border-radius:99px;background:var(--line)}
+
+/* ---------- layout ---------- */
+.workspace{display:grid;grid-template-columns:minmax(0,1fr) 372px;gap:20px;align-items:start;margin-top:18px}
+@media (max-width:1080px){ .workspace{grid-template-columns:minmax(0,1fr)} }
+
+.map-wrap{
+  position:relative;background:var(--surface);border:1px solid var(--rule);
+  border-radius:10px;box-shadow:var(--shadow);overflow-x:auto;overflow-y:hidden;
+}
+.map{position:relative;min-width:1140px;padding:26px 30px;padding-inline-start:58px;padding-inline-end:26px}
+.wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.wires path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+.line{position:relative;margin:0 0 6px;padding:0}
+.line + .line{margin-top:10px}
+.line-head{display:flex;align-items:baseline;gap:10px;margin:0 0 8px;padding-left:2px}
+.line-badge{
+  font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--surface);background:var(--line);padding:3px 9px;border-radius:3px;white-space:nowrap;
+}
+.line-note{font-size:12.5px;color:var(--ink-3)}
+.stops{list-style:none;display:flex;gap:var(--stop-gap);margin:0;padding:0 0 6px 2px;align-items:stretch}
+.stops li{display:flex;width:var(--stop-w)}
+
+.stop{
+  position:relative;width:100%;min-height:104px;text-align:left;
+  background:var(--surface);border:1px solid var(--rule);border-left:4px solid var(--line);
+  border-radius:7px;padding:11px 12px 12px;cursor:pointer;display:block;
+  transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.stop:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--line)}
+.stop[aria-current="true"]{border-color:var(--line);box-shadow:0 0 0 2px var(--line) inset}
+.stop.is-locked{opacity:.55}
+.stop.is-done{background:var(--surface-2)}
+.stop-code{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;
+  color:var(--line);font-weight:700;display:block;margin-bottom:3px;
+}
+.stop-title{display:block;font-size:14.5px;font-weight:700;line-height:1.25;letter-spacing:-.01em;margin-bottom:5px;text-wrap:balance}
+.stop-blurb{display:block;font-size:12.5px;line-height:1.4;color:var(--ink-2)}
+.stop-mark{
+  position:absolute;top:9px;right:9px;width:17px;height:17px;border-radius:99px;
+  border:1.5px solid var(--rule);display:grid;place-items:center;
+  font-size:11px;line-height:1;color:var(--surface);
+}
+.stop.is-done .stop-mark{background:var(--ok);border-color:var(--ok)}
+.stop.is-done .stop-title{color:var(--ink-2)}
+
+/* ---------- detail panel ---------- */
+.panel{
+  background:var(--surface);border:1px solid var(--rule);border-radius:10px;
+  box-shadow:var(--shadow);padding:20px;position:sticky;top:20px;
+  max-height:calc(100vh - 40px);overflow-y:auto;
+}
+.panel-line{
+  display:inline-block;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--surface);background:var(--line);padding:3px 9px;border-radius:3px;margin-bottom:12px;
+}
+.panel h2{margin:0 0 8px;font-size:21px;line-height:1.2;letter-spacing:-.015em;text-wrap:balance}
+.panel .lede{margin:0 0 16px;color:var(--ink-2);font-size:14.5px}
+.panel h3{
+  margin:20px 0 8px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:700;
+}
+.panel h3:first-of-type{margin-top:4px}
+.needs{font-size:13px;color:var(--ink-2);background:var(--surface-2);border-radius:6px;padding:9px 11px;margin:0 0 14px}
+.checklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
+.checklist li{display:flex;gap:9px;font-size:13.5px;line-height:1.45;color:var(--ink-2)}
+.checklist li::before{content:"";flex:0 0 6px;height:6px;margin-top:7px;border-radius:99px;background:var(--line)}
+.files{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.files li{font-family:var(--mono);font-size:11.5px;background:var(--surface-2);border-radius:4px;padding:3px 7px;color:var(--ink-2)}
+.prompt{position:relative;margin-top:8px}
+.prompt pre{
+  margin:0;background:var(--surface-2);border:1px solid var(--rule);border-radius:7px;
+  padding:13px 13px 13px;font-family:var(--mono);font-size:12.5px;line-height:1.55;
+  white-space:pre-wrap;word-break:break-word;color:var(--ink);max-height:none;
+}
+.prompt-note{font-size:12px;color:var(--ink-3);margin:8px 0 0}
+.panel-actions{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap}
+.btn-primary{
+  background:var(--line);border-color:transparent;color:#fff;font-weight:700;
+  padding:9px 14px;
+}
+:root[data-theme="dark"] .btn-primary,
+.btn-primary{color:#fff}
+.btn-primary.is-done{background:var(--surface);color:var(--ink);border-color:var(--rule);font-weight:400}
+
+.legend{margin-top:22px;font-size:12.5px;color:var(--ink-3);line-height:1.6;max-width:78ch}
+.legend code{font-family:var(--mono);font-size:11.5px;background:var(--surface-2);padding:1px 5px;border-radius:3px}
+
+/* RTL */
+:root[dir="rtl"] .stop{text-align:right;border-left:1px solid var(--rule);border-right:4px solid var(--line)}
+:root[dir="rtl"] .stop-mark{right:auto;left:9px}
+:root[dir="rtl"] .checklist li::before{margin-top:7px}
+:root[dir="rtl"] .prompt pre{direction:ltr;text-align:left}
+:root[dir="rtl"] .files li{direction:ltr}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important}
+}
+@media (max-width:1080px){
+  .panel{position:relative;top:0;max-height:none}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <p class="eyebrow" data-i18n="eyebrow">Claude Code build map</p>
+      <h1 data-i18n="title">The Job Search Agent, one stop at a time</h1>
+      <p class="tagline" data-i18n="tagline">Four services run from one interchange: find the jobs, rewrite the resume, apply with a human check, reach the hiring manager. Click any stop to get the prompt that builds it.</p>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Language">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="fa" aria-pressed="false">فارسی</button>
+      </div>
+      <button type="button" class="btn" id="reset" data-i18n="reset">Reset progress</button>
+    </div>
+  </header>
+
+  <div class="meter" id="meter"></div>
+
+  <div class="workspace">
+    <div class="map-wrap">
+      <div class="map" id="map">
+        <svg class="wires" id="wires" aria-hidden="true"></svg>
+        <div id="lines"></div>
+      </div>
+    </div>
+    <aside class="panel" id="panel" aria-live="polite"></aside>
+  </div>
+
+  <p class="legend" data-i18n="legend"></p>
+</div>
+
+<script>
+/* =====================================================================
+   DATA — every stop maps to a real file in this repo.
+   Prompts stay in English: they are meant to be pasted into Claude Code.
+   ===================================================================== */
+const LINES = [
+  { id:"setup",    code:"00", name:{en:"Setup",        fa:"راه‌اندازی"},  note:{en:"The interchange — every other line depends on it", fa:"ایستگاه مرکزی — بقیه خط‌ها به آن وابسته‌اند"} },
+  { id:"radar",    code:"10", name:{en:"Job Radar",    fa:"رادار شغل"},   note:{en:"Scrape and rank jobs against your profile, every morning", fa:"هر روز صبح: جمع‌آوری و رتبه‌بندی آگهی‌ها بر اساس پروفایل شما"} },
+  { id:"forge",    code:"20", name:{en:"Resume Forge", fa:"کارگاه رزومه"},note:{en:"One tailored resume + letter per job that scores high", fa:"برای هر آگهی امتیازبالا، یک رزومه و کاورلتر اختصاصی"} },
+  { id:"dispatch", code:"30", name:{en:"Dispatch",     fa:"ارسال"},       note:{en:"Agent prepares the application, you approve before it ships", fa:"ایجنت اپلیکیشن را آماده می‌کند، شما قبل از ارسال تأیید می‌کنید"} },
+  { id:"bridge",   code:"40", name:{en:"Human Bridge", fa:"پل انسانی"},   note:{en:"Find the hiring manager, arrive with a message already written", fa:"پیداکردن مدیر استخدام و آماده‌کردن متن پیام"} }
+];
+
+const STOPS = [
+  /* ---------------- 00 SETUP ---------------- */
+  { id:"s1", line:"setup", code:"00.1",
+    title:{en:"Repo, keys, guardrails", fa:"مخزن، کلیدها، محدودیت‌ها"},
+    blurb:{en:"A project Claude Code can live in, with secrets out of git.", fa:"پروژه‌ای که Claude Code داخلش کار کند، بدون لو رفتن کلیدها."},
+    files:["CLAUDE.md",".env.example","requirements.txt"],
+    check:{
+      en:["`.env` is gitignored, `.env.example` lists every key","CLAUDE.md states the rules: never auto-submit, never fabricate experience","`python3 -m agent.run_daily --dry-run` runs with zero credentials"],
+      fa:["فایل `.env` در گیت‌ایگنور است و `.env.example` همه کلیدها را فهرست می‌کند","در CLAUDE.md قانون‌ها نوشته شده: هرگز ارسال خودکار، هرگز ساختن تجربه جعلی","دستور `python3 -m agent.run_daily --dry-run` بدون هیچ کلیدی اجرا می‌شود"]
+    },
+    prompt:"Set up a Python job-search agent project. Create a CLAUDE.md that states the hard rules for this repo: (1) never submit an application without explicit human approval, (2) never invent experience, skills, or dates that are not in the source resume, (3) rate-limit every scraper and respect robots.txt, (4) all secrets come from .env and .env.example is the only file committed. Add requirements.txt (anthropic, plus stdlib only elsewhere), .gitignore, and a --dry-run flag convention so every script runs offline against fixtures."
+  },
+  { id:"s2", line:"setup", code:"00.2",
+    title:{en:"Profile: resume + preferences", fa:"پروفایل: رزومه و ترجیحات"},
+    blurb:{en:"Your master resume and your filters, as data the agent can read.", fa:"رزومه اصلی و فیلترهایتان، به شکل داده‌ای که ایجنت بخواند."},
+    files:["agent/config/resume.example.md","agent/config/preferences.example.json"],
+    check:{
+      en:["Master resume in Markdown, one section per role, every bullet true","preferences.json holds titles, locations, remote, seniority, visa, salary floor, hard excludes","A short 'story bank' of achievements the tailor can pull from"],
+      fa:["رزومه اصلی به Markdown، برای هر نقش یک بخش، همه بولت‌ها واقعی","در preferences.json: عنوان‌ها، شهرها، دورکاری، سطح، ویزا، حداقل حقوق، موارد رد","یک «بانک دستاورد» کوتاه که ماژول رزومه از آن بردارد"]
+    },
+    prompt:"Read my resume file and turn it into agent/config/resume.md: a structured Markdown master resume with stable section ids, plus a 'story bank' section of 10-15 achievement bullets with metrics. Then interview me with a handful of questions and write agent/config/preferences.json capturing: target titles, seniority, locations + remote policy, work authorisation, salary floor, industries to exclude, company sizes, and keywords that should auto-reject a posting."
+  },
+  { id:"s3", line:"setup", code:"00.3",
+    title:{en:"The tracker", fa:"دیتابیس پیگیری"},
+    blurb:{en:"One SQLite file that remembers every job, draft and message.", fa:"یک فایل SQLite که هر آگهی، پیش‌نویس و پیام را به یاد دارد."},
+    files:["agent/jobsearch/store.py","data/tracker.db"],
+    check:{
+      en:["Tables: jobs, applications, contacts, messages — each with a status column","Re-running the scraper never creates a duplicate job row","`--status` prints today's pipeline as a table"],
+      fa:["جدول‌ها: jobs, applications, contacts, messages — هرکدام با ستون وضعیت","اجرای دوباره اسکرپر هیچ ردیف تکراری نمی‌سازد","با `--status` وضعیت امروز به شکل جدول چاپ می‌شود"]
+    },
+    prompt:"Create agent/jobsearch/store.py: a small SQLite layer (stdlib sqlite3, no ORM) with tables jobs, applications, contacts, messages. Jobs get a content hash primary key so re-scraping is idempotent. Include helpers: upsert_job, set_status, list_by_status, and a status_report() that prints counts per stage. Write it so a fresh DB is created on first run and migrations are additive."
+  },
+
+  /* ---------------- 10 JOB RADAR ---------------- */
+  { id:"r1", line:"radar", code:"10.1",
+    title:{en:"Pick your sources", fa:"انتخاب منابع"},
+    blurb:{en:"Start with APIs and job boards that allow it. No LinkedIn scraping.", fa:"با APIها و بوردهایی شروع کنید که اجازه می‌دهند. لینکدین را اسکرپ نکنید."},
+    files:["agent/jobsearch/sources.py"],
+    check:{
+      en:["Greenhouse / Lever / Ashby public JSON boards for companies you target","One aggregator API key (JSearch, Adzuna, RemoteOK) as a wide net","Each source is a function returning the same Job dict shape"],
+      fa:["بوردهای عمومی Greenhouse / Lever / Ashby برای شرکت‌های هدف","یک API تجمیع‌کننده (JSearch، Adzuna، RemoteOK) به‌عنوان تور گسترده","هر منبع یک تابع است که همان ساختار Job را برمی‌گرداند"]
+    },
+    prompt:"Create agent/jobsearch/sources.py with a pluggable source registry. Implement: greenhouse(board_token), lever(company), ashby(company), remoteok(), and a generic json_api source configured from preferences.json. Every source returns the same normalised dict: source, external_id, title, company, location, remote, url, description, posted_at, salary_raw. Use urllib from stdlib, set a descriptive User-Agent, cache responses to data/cache/ for 6 hours, and back off on 429. Do not scrape LinkedIn or anything whose terms forbid it."
+  },
+  { id:"r2", line:"radar", code:"10.2",
+    title:{en:"Filter and dedupe", fa:"فیلتر و حذف تکراری"},
+    blurb:{en:"Cheap rules first, so the model never sees obvious junk.", fa:"اول قوانین ارزان، تا مدل آگهی‌های بی‌ربط را نبیند."},
+    files:["agent/jobsearch/scrape.py"],
+    check:{
+      en:["Hard filters from preferences: location, seniority, excluded keywords","Same role posted on three boards collapses into one row","Anything older than N days is dropped"],
+      fa:["فیلترهای قطعی از preferences: مکان، سطح، کلمات ممنوع","یک نقش که در سه بورد آمده، به یک ردیف تبدیل می‌شود","آگهی‌های قدیمی‌تر از N روز حذف می‌شوند"]
+    },
+    prompt:"Create agent/jobsearch/scrape.py that runs every enabled source, applies the hard filters from preferences.json (title allow-list, excluded keywords, location/remote policy, max age in days), dedupes across sources by normalised (company, title, location) plus a fuzzy title match, and upserts survivors into the tracker with status='new'. Log a one-line summary per source: fetched / kept / duplicates."
+  },
+  { id:"r3", line:"radar", code:"10.3",
+    title:{en:"Score against your resume", fa:"امتیازدهی با رزومه"},
+    blurb:{en:"Claude reads job + resume and returns a score with reasons.", fa:"Claude آگهی و رزومه را می‌خواند و امتیاز با دلیل می‌دهد."},
+    files:["agent/jobsearch/score.py","agent/jobsearch/llm.py"],
+    check:{
+      en:["Structured output: score 0-100, matched skills, gaps, one-line verdict","Batched — one call per job, cheap model, cached by job hash","Below the threshold, a job never reaches the resume line"],
+      fa:["خروجی ساختاریافته: امتیاز ۰ تا ۱۰۰، مهارت‌های منطبق، شکاف‌ها، حکم یک‌خطی","هر آگهی یک درخواست، با مدل ارزان و کش بر اساس هش آگهی","زیر آستانه امتیاز، آگهی به خط رزومه نمی‌رسد"]
+    },
+    prompt:"Create agent/jobsearch/llm.py (a thin Anthropic client wrapper with retries, a MOCK mode for --dry-run, and a json_call helper that forces a tool-shaped JSON response) and agent/jobsearch/score.py. score.py sends each new job's description plus my master resume summary to Claude and gets back {score, matched_skills, missing_skills, verdict, tailoring_hints}. Cache by job hash so re-runs cost nothing, and store the result on the job row."
+  },
+  { id:"r4", line:"radar", code:"10.4",
+    title:{en:"The morning digest", fa:"خلاصه صبحگاهی"},
+    blurb:{en:"One page you read with coffee: today's shortlist, ranked.", fa:"یک صفحه برای صبح: فهرست کوتاه امروز، رتبه‌بندی‌شده."},
+    files:["agent/jobsearch/digest.py","data/digests/"],
+    check:{
+      en:["Top 10 by score, each with company, verdict, and the two biggest gaps","Written to data/digests/YYYY-MM-DD.md and optionally emailed","Approve or skip straight from the digest, by job id"],
+      fa:["۱۰ مورد برتر با نام شرکت، حکم و دو شکاف اصلی","ذخیره در data/digests/YYYY-MM-DD.md و در صورت نیاز ایمیل","تأیید یا رد مستقیم از روی همان خلاصه، با شناسه آگهی"]
+    },
+    prompt:"Create agent/jobsearch/digest.py that renders today's scored jobs into a Markdown digest: ranked table (score, title, company, location, salary), then a short card per job with the verdict, matched and missing skills, and the apply link. Save to data/digests/<date>.md and print the path. Add a CLI: `python -m agent.jobsearch.digest --approve 12,17` to move those jobs to status='approved'."
+  },
+  { id:"r5", line:"radar", code:"10.5",
+    title:{en:"Run it every morning", fa:"اجرای هر روز صبح"},
+    blurb:{en:"Cron, GitHub Actions, or a Claude Code Routine at 7am.", fa:"Cron، گیت‌هاب اکشنز یا Routine در Claude Code، ساعت ۷ صبح."},
+    files:["agent/run_daily.py",".github/workflows/daily.yml"],
+    check:{
+      en:["One entrypoint runs scrape → score → digest and exits non-zero on failure","Scheduled and observed — you notice when it stops working","Logs kept per run, last 30 days"],
+      fa:["یک نقطه ورود: scrape ← score ← digest، و در خطا خروج ناموفق","زمان‌بندی‌شده و تحت نظر — اگر خراب شد متوجه می‌شوید","لاگ هر اجرا برای ۳۰ روز اخیر نگه داشته می‌شود"]
+    },
+    prompt:"Create agent/run_daily.py that chains scrape → score → digest with structured logging to data/logs/<date>.log, a --dry-run flag using fixtures, and a non-zero exit on any stage failure. Then add a GitHub Actions workflow that runs it every weekday at 07:00 in my timezone, restores data/tracker.db from the repo or an artifact, commits the new digest back, and fails loudly. Show me the alternative Claude Code Routine setup too."
+  },
+
+  /* ---------------- 20 RESUME FORGE ---------------- */
+  { id:"f1", line:"forge", code:"20.1",
+    title:{en:"Read the job like an ATS", fa:"خواندن آگهی مثل ATS"},
+    blurb:{en:"Pull the requirements out of the posting into a structured list.", fa:"استخراج الزامات آگهی به شکل فهرست ساختاریافته."},
+    files:["agent/jobsearch/tailor.py"],
+    check:{
+      en:["Must-haves, nice-to-haves, and the exact keyword spellings the JD uses","Seniority signals and the team's real problem, in one line","Stored on the job row for reuse"],
+      fa:["الزامات اجباری، مزیت‌ها، و املای دقیق کلیدواژه‌های آگهی","سطح ارشدیت و مسئله واقعی تیم، در یک خط","ذخیره روی همان ردیف آگهی برای استفاده مجدد"]
+    },
+    prompt:"Start agent/jobsearch/tailor.py with a parse_jd(job) step: Claude returns {must_have:[], nice_to_have:[], exact_keywords:[], seniority, team_problem, tone}. exact_keywords must preserve the JD's own spelling (e.g. 'Node.js' vs 'NodeJS') because that is what keyword filters match on. Persist the result to the job row."
+  },
+  { id:"f2", line:"forge", code:"20.2",
+    title:{en:"Map your evidence", fa:"نقشه شواهد"},
+    blurb:{en:"Every requirement gets a real bullet from your history — or a gap.", fa:"هر الزام به یک بولت واقعی وصل می‌شود — یا شکاف اعلام می‌شود."},
+    files:["agent/jobsearch/tailor.py"],
+    check:{
+      en:["Requirement → evidence table, sourced only from the story bank","Unbacked requirements are listed as gaps, never invented","Gaps become interview prep and a learning list, not resume lines"],
+      fa:["جدول الزام ← شواهد، فقط از بانک دستاورد","الزامات بدون پشتوانه به‌عنوان شکاف ثبت می‌شوند، نه ساخته","شکاف‌ها به آمادگی مصاحبه و لیست یادگیری تبدیل می‌شوند"]
+    },
+    prompt:"Add build_evidence_map(jd, resume) to tailor.py. For each must_have and nice_to_have, select the strongest supporting bullet from the story bank and return {requirement, evidence_bullet_id, confidence} — or mark it a gap. The system prompt must forbid using any experience not present in the source resume. Output a Markdown table so I can eyeball it before anything is written."
+  },
+  { id:"f3", line:"forge", code:"20.3",
+    title:{en:"Rewrite the bullets", fa:"بازنویسی بولت‌ها"},
+    blurb:{en:"Same facts, reordered and reworded for this one job.", fa:"همان واقعیت‌ها، مرتب و بازنویسی‌شده برای همین یک شغل."},
+    files:["agent/jobsearch/tailor.py","data/applications/"],
+    check:{
+      en:["Section order and bullet order follow the JD's priorities","Every rewritten bullet keeps its original metric and scope","A diff against the master resume is printed for review"],
+      fa:["ترتیب بخش‌ها و بولت‌ها بر اساس اولویت‌های آگهی","هر بولت بازنویسی‌شده عدد و دامنه اصلی خود را حفظ می‌کند","تفاوت با رزومه اصلی برای بازبینی چاپ می‌شود"]
+    },
+    prompt:"Add tailor_resume(job) to tailor.py: reorder sections and bullets by the JD's priorities, rewrite each selected bullet to lead with the outcome and use the JD's exact keywords where they are honestly applicable, and drop irrelevant roles down or off. Keep every metric identical to the source. Write data/applications/<job_id>/resume.md plus diff.md showing exactly what changed versus the master, so I can approve the delta."
+  },
+  { id:"f4", line:"forge", code:"20.4",
+    title:{en:"Render a clean PDF", fa:"خروجی PDF تمیز"},
+    blurb:{en:"Single column, real text, parseable — not a design showcase.", fa:"تک‌ستونی، متن واقعی و قابل‌خواندن — نه نمایش گرافیک."},
+    files:["agent/jobsearch/render.py"],
+    check:{
+      en:["Markdown → HTML → PDF, one column, no tables or text boxes","Filename: Firstname-Lastname-Company-Role.pdf","Text copies out of the PDF in the right order"],
+      fa:["مسیر Markdown ← HTML ← PDF، تک‌ستونی، بدون جدول و کادر متنی","نام فایل: Firstname-Lastname-Company-Role.pdf","متن از داخل PDF با ترتیب درست کپی می‌شود"]
+    },
+    prompt:"Create agent/jobsearch/render.py: convert the tailored resume.md into an ATS-safe PDF. Single column, standard fonts, no tables, no headers/footers, no icons, section headings as real text. Use weasyprint if available and fall back to Chromium headless print-to-pdf. Name the file <Name>-<Company>-<Role>.pdf and verify after writing that pdftotext returns the bullets in reading order."
+  },
+  { id:"f5", line:"forge", code:"20.5",
+    title:{en:"Cover letter + screening answers", fa:"کاورلتر و پاسخ سؤالات"},
+    blurb:{en:"Three paragraphs, and reusable answers to the usual questions.", fa:"سه پاراگراف، به‌علاوه پاسخ‌های قابل‌استفاده برای سؤالات رایج."},
+    files:["agent/jobsearch/letter.py"],
+    check:{
+      en:["Why this company (specific), why me (evidence), what I'd do first","A snippets file: notice period, salary expectation, visa, relocation","Nothing in it contradicts the resume"],
+      fa:["چرا این شرکت (مشخص)، چرا من (شواهد)، اولین کاری که می‌کنم","فایل پاسخ‌های آماده: زمان شروع، انتظار حقوق، ویزا، جابه‌جایی","هیچ چیزی با رزومه در تضاد نیست"]
+    },
+    prompt:"Create agent/jobsearch/letter.py generating a 3-paragraph cover letter per approved job: paragraph 1 a specific reason for this company drawn from the posting or their engineering blog, paragraph 2 the two strongest pieces of evidence for their must-haves, paragraph 3 what I would work on in the first 90 days. Also maintain data/snippets.json with my standard answers (notice period, salary expectation, visa status, relocation, why leaving) and reuse them verbatim."
+  },
+
+  /* ---------------- 30 DISPATCH ---------------- */
+  { id:"d1", line:"dispatch", code:"30.1",
+    title:{en:"The application queue", fa:"صف اپلیکیشن"},
+    blurb:{en:"Everything approved, waiting in one place with its documents.", fa:"همه موارد تأییدشده، در یک جا همراه با مدارکشان."},
+    files:["agent/jobsearch/queue.py"],
+    check:{
+      en:["Queue lists job, deadline, documents, and what's still missing","Statuses move one way: approved → prepared → submitted → replied","Nothing enters 'prepared' without a resume and letter on disk"],
+      fa:["صف شامل شغل، مهلت، مدارک و موارد ناقص","وضعیت‌ها یک‌طرفه پیش می‌روند: approved ← prepared ← submitted ← replied","بدون رزومه و کاورلتر روی دیسک، چیزی prepared نمی‌شود"]
+    },
+    prompt:"Create agent/jobsearch/queue.py: a CLI over the tracker showing the application pipeline as a table, with commands to prepare (runs tailor + render + letter for a job), inspect (prints the file paths), and reject. Enforce the state machine — a job can only become 'prepared' when its resume PDF and letter exist on disk."
+  },
+  { id:"d2", line:"dispatch", code:"30.2",
+    title:{en:"Draft the form answers", fa:"پیش‌نویس پاسخ فرم‌ها"},
+    blurb:{en:"Long free-text questions answered ahead of time, in your voice.", fa:"پاسخ سؤالات تشریحی، از قبل و با لحن خودتان."},
+    files:["agent/jobsearch/queue.py","data/applications/"],
+    check:{
+      en:["Answers saved as answers.md next to the resume, ready to paste","Each answer stays under the site's character limit","Voice matches your own writing, not generic AI phrasing"],
+      fa:["پاسخ‌ها در answers.md کنار رزومه، آماده کپی","هر پاسخ زیر محدودیت کاراکتر سایت","لحن شبیه نوشته خودتان، نه عبارات کلیشه‌ای"]
+    },
+    prompt:"Extend prepare() to generate data/applications/<job_id>/answers.md: the standard screening questions from snippets.json plus any long-form questions found in the posting, each answered in my voice using only facts from my resume, with a character count next to each answer. Add a short 'submission checklist' at the top of the file listing the fields I will need to fill on the site."
+  },
+  { id:"d3", line:"dispatch", code:"30.3",
+    title:{en:"The human gate", fa:"دروازه تأیید انسانی"},
+    blurb:{en:"You read the diff and approve. The agent never submits alone.", fa:"شما تفاوت‌ها را می‌بینید و تأیید می‌کنید. ایجنت خودش ارسال نمی‌کند."},
+    files:["agent/jobsearch/review.py"],
+    check:{
+      en:["Review view: resume diff, letter, answers, and the apply URL together","Approving stamps who approved it and when","This gate is not configurable away — it's the point"],
+      fa:["نمای بازبینی: تفاوت رزومه، کاورلتر، پاسخ‌ها و لینک اپلای، کنار هم","تأیید، نام تأییدکننده و زمان را ثبت می‌کند","این دروازه قابل حذف نیست — اصل ماجرا همین است"]
+    },
+    prompt:"Create agent/jobsearch/review.py: for one prepared application, print the resume diff versus master, the cover letter, the answers, and the apply URL, then ask for an explicit y/N. On approval, record approved_by and approved_at on the application row and open the apply URL in the browser. There must be no flag that skips this step — document that decision in CLAUDE.md."
+  },
+  { id:"d4", line:"dispatch", code:"30.4",
+    title:{en:"Submit and log", fa:"ارسال و ثبت"},
+    blurb:{en:"You do the final click; the agent records everything around it.", fa:"کلیک آخر با شماست؛ ایجنت باقی ماجرا را ثبت می‌کند."},
+    files:["agent/jobsearch/queue.py"],
+    check:{
+      en:["Submitted date, confirmation email, and portal login stored per application","A weekly count so you can see your real throughput","Optional: browser automation only for autofill, never for submit"],
+      fa:["تاریخ ارسال، ایمیل تأیید و اطلاعات ورود پورتال برای هر اپلیکیشن","شمارش هفتگی برای دیدن نرخ واقعی","اختیاری: اتوماسیون مرورگر فقط برای پرکردن فرم، نه ارسال"]
+    },
+    prompt:"Add `queue submit <job_id>` that marks an application submitted, stores the submission timestamp, portal name, and any confirmation reference I paste in, and prints my weekly stats (prepared / submitted / replied / interview). If I ask for autofill later, use Playwright to fill fields from answers.md and then stop at the review screen — it must never click the final submit button."
+  },
+  { id:"d5", line:"dispatch", code:"30.5",
+    title:{en:"Follow-up timer", fa:"تایمر پیگیری"},
+    blurb:{en:"Day 7 nudge, day 14 close-out — drafted automatically.", fa:"روز هفتم یادآوری، روز چهاردهم بستن پرونده — پیش‌نویس خودکار."},
+    files:["agent/jobsearch/followup.py"],
+    check:{
+      en:["Applications with no reply after 7 days surface in the digest","A short follow-up email is drafted, not sent","Two follow-ups maximum, then the row closes itself"],
+      fa:["اپلیکیشن‌های بی‌پاسخ بعد از ۷ روز در خلاصه ظاهر می‌شوند","یک ایمیل پیگیری کوتاه پیش‌نویس می‌شود، نه ارسال","حداکثر دو پیگیری، بعد پرونده بسته می‌شود"]
+    },
+    prompt:"Create agent/jobsearch/followup.py: find applications submitted more than 7 days ago with no reply, draft a 4-sentence follow-up referencing something specific from the role, and add them to tomorrow's digest as drafts for me to send. Cap it at two follow-ups per application, then set status='closed'. Never send email automatically."
+  },
+
+  /* ---------------- 40 HUMAN BRIDGE ---------------- */
+  { id:"b1", line:"bridge", code:"40.1",
+    title:{en:"Find the hiring manager", fa:"پیداکردن مدیر استخدام"},
+    blurb:{en:"Who owns this role — not the recruiter inbox.", fa:"صاحب واقعی این نقش — نه صندوق ورودی ریکروتر."},
+    files:["agent/jobsearch/contacts.py"],
+    check:{
+      en:["Two names per job: the likely hiring manager and one teammate","Sourced from the posting, the company site, or LinkedIn search you run","LinkedIn is used by you in the browser — the agent prepares the query"],
+      fa:["برای هر شغل دو نفر: مدیر استخدام احتمالی و یک هم‌تیمی","از خود آگهی، سایت شرکت، یا جست‌وجوی لینکدینی که خودتان اجرا می‌کنید","لینکدین را خودتان در مرورگر باز می‌کنید — ایجنت فقط کوئری را می‌سازد"]
+    },
+    prompt:"Create agent/jobsearch/contacts.py. For an approved job, infer the hiring manager's likely title from the JD (e.g. 'Engineering Manager, Payments') and produce ready-to-run LinkedIn people-search URLs scoped to that company and title, plus a Google site:linkedin.com/in query. Store candidate contacts in the tracker with name, title, profile URL and source. I will run the searches in my browser and paste back the results — do not automate LinkedIn."
+  },
+  { id:"b2", line:"bridge", code:"40.2",
+    title:{en:"Verify before you write", fa:"تأیید قبل از نوشتن"},
+    blurb:{en:"Right person, right team, still employed there.", fa:"آدم درست، تیم درست، هنوز همان‌جا شاغل."},
+    files:["agent/jobsearch/contacts.py"],
+    check:{
+      en:["Title, team and tenure confirmed from their public profile","One specific hook: a post, a talk, a shipped feature, a shared background","No contact gets a message without a hook"],
+      fa:["عنوان، تیم و سابقه از پروفایل عمومی تأیید شده","یک نکته مشخص: پست، سخنرانی، محصول، یا سابقه مشترک","بدون آن نکته، برای کسی پیام نوشته نمی‌شود"]
+    },
+    prompt:"Add a verify step to contacts.py: I paste a contact's public profile text, and Claude extracts title, team, tenure, and up to three 'hooks' — recent posts, talks, projects, or overlaps with my own background — scoring how usable each hook is. Mark the contact ready_to_message only when at least one strong hook exists."
+  },
+  { id:"b3", line:"bridge", code:"40.3",
+    title:{en:"Write the first message", fa:"نوشتن پیام اول"},
+    blurb:{en:"Under 400 characters, one hook, one ask, no résumé dump.", fa:"زیر ۴۰۰ کاراکتر، یک نکته، یک درخواست، بدون کپی رزومه."},
+    files:["agent/jobsearch/outreach.py"],
+    check:{
+      en:["Connection note ≤300 chars and an InMail/email variant","Opens with the hook, not with 'I am writing to apply'","Ends with one specific, easy-to-answer question"],
+      fa:["نوت درخواست ارتباط زیر ۳۰۰ کاراکتر، به‌علاوه نسخه InMail یا ایمیل","با نکته شخصی شروع می‌شود، نه با «جهت درخواست شغل»","با یک سؤال مشخص و آسان تمام می‌شود"]
+    },
+    prompt:"Create agent/jobsearch/outreach.py: generate three message variants per verified contact — a LinkedIn connection note under 300 characters, a 120-word InMail, and a cold email — each opening with the specific hook, naming the role, giving one line of the strongest relevant evidence, and closing with a single easy question. Save to data/applications/<job_id>/outreach.md with character counts, and log each as a message row with status='draft'."
+  },
+  { id:"b4", line:"bridge", code:"40.4",
+    title:{en:"Follow-up ladder", fa:"نردبان پیگیری"},
+    blurb:{en:"Two nudges, spaced, each adding something new. Then stop.", fa:"دو یادآوری با فاصله، هرکدام با نکته تازه. بعد توقف."},
+    files:["agent/jobsearch/followup.py"],
+    check:{
+      en:["Day 4 and day 11 drafts, each with new information, not 'just bumping'","Auto-stop on any reply","A contact is never messaged for two different roles in the same month"],
+      fa:["پیش‌نویس‌های روز ۴ و ۱۱، هرکدام با اطلاعات تازه، نه «فقط یادآوری»","با هر پاسخی، پیگیری متوقف می‌شود","یک نفر در یک ماه برای دو نقش پیام نمی‌گیرد"]
+    },
+    prompt:"Extend followup.py to cover outreach: draft a day-4 and a day-11 follow-up per unanswered contact, each contributing something new (a relevant piece of work, a question about the team's roadmap). Stop the ladder immediately when a reply is logged, cap at two, and add a guard preventing the same contact from being messaged about a second role within 30 days."
+  },
+  { id:"b5", line:"bridge", code:"40.5",
+    title:{en:"Referrals and warm paths", fa:"معرفی و مسیرهای گرم"},
+    blurb:{en:"Second-degree connections beat cold messages every time.", fa:"ارتباط درجه‌دو همیشه از پیام سرد بهتر جواب می‌دهد."},
+    files:["agent/jobsearch/contacts.py"],
+    check:{
+      en:["For each target company, list who you already know there","A short, easy-to-forward referral ask drafted per person","Referred applications tracked separately — watch the reply rate"],
+      fa:["برای هر شرکت هدف، فهرست کسانی که از قبل می‌شناسید","یک درخواست معرفی کوتاه و قابل‌فوروارد برای هر نفر","اپلیکیشن‌های با معرفی جدا ثبت می‌شوند — نرخ پاسخ را ببینید"]
+    },
+    prompt:"Add referral support: I export my LinkedIn connections CSV to data/connections.csv; match it against target companies and rank possible referrers by closeness and tenure. For each, draft a referral ask that is short, forwardable, and includes a one-paragraph blurb they can paste. Track referral_source on applications and report reply rate for referred versus cold applications in the weekly stats."
+  }
+];
+
+const UI = {
+  en:{
+    eyebrow:"Claude Code build map",
+    title:"The Job Search Agent, one stop at a time",
+    tagline:"Four services run from one interchange: find the jobs, rewrite the resume, apply with a human check, reach the hiring manager. Click any stop to get the prompt that builds it.",
+    reset:"Reset progress",
+    done:"complete",
+    of:"of",
+    stops:"stops",
+    needs:"Needs first:",
+    build:"Build this with Claude Code",
+    checkTitle:"Done when",
+    filesTitle:"Files it creates",
+    markDone:"Mark complete",
+    markUndone:"Mark incomplete",
+    copy:"Copy prompt",
+    copied:"Copied",
+    promptNote:"Paste this into Claude Code inside the repo. Prompts stay in English on purpose — that is the language of the codebase.",
+    pickOne:"Pick a stop on the map to see what it does, how you know it's finished, and the prompt that builds it.",
+    legend:"Progress is stored in this browser only. Run the pipeline with <code>python3 -m agent.run_daily --dry-run</code> before you add any API keys. Rule that does not move: the agent prepares, a human approves, and no application or message is sent without you."
+  },
+  fa:{
+    eyebrow:"نقشه ساخت با Claude Code",
+    title:"ایجنت جست‌وجوی کار، ایستگاه به ایستگاه",
+    tagline:"چهار خط از یک ایستگاه مرکزی: پیداکردن آگهی، بازنویسی رزومه، اپلای با تأیید انسانی، رسیدن به مدیر استخدام. روی هر ایستگاه بزنید تا پرامپت ساختش را ببینید.",
+    reset:"پاک‌کردن پیشرفت",
+    done:"انجام‌شده",
+    of:"از",
+    stops:"ایستگاه",
+    needs:"پیش‌نیاز:",
+    build:"با Claude Code بساز",
+    checkTitle:"وقتی تمام است که",
+    filesTitle:"فایل‌هایی که می‌سازد",
+    markDone:"علامت‌زدن به‌عنوان انجام‌شده",
+    markUndone:"برگرداندن به انجام‌نشده",
+    copy:"کپی پرامپت",
+    copied:"کپی شد",
+    promptNote:"این را داخل مخزن، در Claude Code جای‌گذاری کنید. پرامپت‌ها عمداً انگلیسی‌اند — زبان کدبیس همین است.",
+    pickOne:"یک ایستگاه از نقشه را انتخاب کنید تا کارش، معیار پایانش و پرامپت ساختش را ببینید.",
+    legend:"پیشرفت فقط در همین مرورگر ذخیره می‌شود. قبل از افزودن هر کلید API، خط لوله را با <code>python3 -m agent.run_daily --dry-run</code> اجرا کنید. قانونی که تغییر نمی‌کند: ایجنت آماده می‌کند، انسان تأیید می‌کند، و هیچ اپلیکیشن یا پیامی بدون شما ارسال نمی‌شود."
+  }
+};
+
+/* =====================================================================
+   STATE
+   ===================================================================== */
+const KEY = "jobsearch-skilltree-v1";
+let lang = "en";
+let selected = STOPS[0].id;
+let done = new Set();
+try{
+  const saved = JSON.parse(localStorage.getItem(KEY) || "{}");
+  if(Array.isArray(saved.done)) done = new Set(saved.done);
+  if(saved.lang === "fa" || saved.lang === "en") lang = saved.lang;
+}catch(e){/* first run */}
+
+const save = () => {
+  try{ localStorage.setItem(KEY, JSON.stringify({done:[...done], lang})); }catch(e){}
+};
+const t = k => UI[lang][k];
+const stopById = id => STOPS.find(s => s.id === id);
+const lineById = id => LINES.find(l => l.id === id);
+const stopsOf = lineId => STOPS.filter(s => s.line === lineId);
+
+function prereq(stop){
+  const siblings = stopsOf(stop.line);
+  const i = siblings.indexOf(stop);
+  if(i > 0) return siblings[i-1];
+  if(stop.line !== "setup") return stopsOf("setup").slice(-1)[0];
+  return null;
+}
+const isOpen = stop => {
+  const p = prereq(stop);
+  return !p || done.has(p.id);
+};
+
+/* =====================================================================
+   RENDER — map
+   ===================================================================== */
+const linesEl = document.getElementById("lines");
+const wires = document.getElementById("wires");
+const panel = document.getElementById("panel");
+const meter = document.getElementById("meter");
+
+function renderMap(){
+  linesEl.innerHTML = "";
+  for(const line of LINES){
+    const sec = document.createElement("section");
+    sec.className = "line";
+    sec.style.setProperty("--line", `var(--l-${line.id})`);
+
+    const head = document.createElement("div");
+    head.className = "line-head";
+    head.innerHTML = `<span class="line-badge">${line.code} · ${line.name[lang]}</span>
+                      <span class="line-note">${line.note[lang]}</span>`;
+    sec.appendChild(head);
+
+    const ol = document.createElement("ol");
+    ol.className = "stops";
+    for(const stop of stopsOf(line.id)){
+      const li = document.createElement("li");
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "stop" + (done.has(stop.id) ? " is-done" : "") + (isOpen(stop) ? "" : " is-locked");
+      b.id = "stop-" + stop.id;
+      b.setAttribute("aria-current", stop.id === selected ? "true" : "false");
+      b.innerHTML = `<span class="stop-mark">${done.has(stop.id) ? "✓" : ""}</span>
+        <span class="stop-code">${stop.code}</span>
+        <span class="stop-title">${stop.title[lang]}</span>
+        <span class="stop-blurb">${stop.blurb[lang]}</span>`;
+      b.addEventListener("click", () => { selected = stop.id; renderAll(); });
+      li.appendChild(b);
+      ol.appendChild(li);
+    }
+    sec.appendChild(ol);
+    linesEl.appendChild(sec);
+  }
+  requestAnimationFrame(drawWires);
+}
+
+function drawWires(){
+  const map = document.getElementById("map");
+  const base = map.getBoundingClientRect();
+  const box = el => {
+    const r = el.getBoundingClientRect();
+    return {x:r.left - base.left, y:r.top - base.top, w:r.width, h:r.height};
+  };
+  wires.setAttribute("viewBox", `0 0 ${map.scrollWidth} ${map.scrollHeight}`);
+  wires.setAttribute("width", map.scrollWidth);
+  wires.setAttribute("height", map.scrollHeight);
+  wires.style.width = map.scrollWidth + "px";
+  wires.style.height = map.scrollHeight + "px";
+
+  let d = "";
+  const seg = (path, lineId, isDone) =>
+    d += `<path d="${path}" stroke="var(--l-${lineId})" stroke-width="${isDone ? 3.5 : 2.5}" opacity="${isDone ? 1 : .3}" />`;
+  const rtl = document.documentElement.dir === "rtl";
+
+  // stop to stop, along each line — connect the facing edges, whichever way the page runs
+  for(const line of LINES){
+    const list = stopsOf(line.id);
+    for(let i = 0; i < list.length - 1; i++){
+      const a = document.getElementById("stop-" + list[i].id);
+      const c = document.getElementById("stop-" + list[i+1].id);
+      if(!a || !c) continue;
+      const ra = box(a), rc = box(c);
+      const [left, right] = ra.x < rc.x ? [ra, rc] : [rc, ra];
+      const y = ra.y + ra.h/2;
+      seg(`M ${left.x + left.w} ${y} L ${right.x} ${y}`, line.id, done.has(list[i].id));
+    }
+  }
+
+  // the interchange: a trunk down the outer margin, one branch per line
+  const hubStop = stopsOf("setup").slice(-1)[0];
+  const hub = document.getElementById("stop-" + hubStop.id);
+  const branchLines = LINES.filter(l => l.id !== "setup");
+  const firstEls = branchLines.map(l => document.getElementById("stop-" + stopsOf(l.id)[0].id));
+  if(hub && firstEls.every(Boolean)){
+    const rh = box(hub);
+    const spineX = rtl ? map.scrollWidth - 26 : 26;
+    const hubX = rh.x + rh.w/2;
+    const turn = spineX > hubX ? 1 : -1;          // which way the trunk leaves the hub
+    const r = 11, drop = rh.y + rh.h + 18;
+    const mid = el => { const b = box(el); return b.y + b.h/2; };
+    seg(
+      `M ${hubX} ${rh.y + rh.h} ` +
+      `L ${hubX} ${drop - r} Q ${hubX} ${drop} ${hubX + turn * r} ${drop} ` +
+      `L ${spineX - turn * r} ${drop} Q ${spineX} ${drop} ${spineX} ${drop + r} ` +
+      `L ${spineX} ${mid(firstEls[firstEls.length - 1])}`,
+      "setup", done.has(hubStop.id)
+    );
+    branchLines.forEach((line, i) => {
+      const rf = box(firstEls[i]);
+      const edge = rtl ? rf.x + rf.w : rf.x;
+      seg(`M ${spineX} ${mid(firstEls[i])} L ${edge} ${mid(firstEls[i])}`, line.id, done.has(hubStop.id));
+    });
+  }
+  wires.innerHTML = d;
+}
+
+/* =====================================================================
+   RENDER — panel + meter
+   ===================================================================== */
+function renderPanel(){
+  const stop = stopById(selected);
+  const line = lineById(stop.line);
+  const p = prereq(stop);
+  const isDone = done.has(stop.id);
+  panel.style.setProperty("--line", `var(--l-${line.id})`);
+
+  panel.innerHTML = `
+    <span class="panel-line">${line.code} · ${line.name[lang]} — ${stop.code}</span>
+    <h2>${stop.title[lang]}</h2>
+    <p class="lede">${stop.blurb[lang]}</p>
+    ${(p && !done.has(p.id)) ? `<p class="needs"><strong>${t("needs")}</strong> ${p.code} — ${p.title[lang]}</p>` : ""}
+    <h3>${t("checkTitle")}</h3>
+    <ul class="checklist">${stop.check[lang].map(c => `<li>${c}</li>`).join("")}</ul>
+    <h3>${t("filesTitle")}</h3>
+    <ul class="files">${stop.files.map(f => `<li>${f}</li>`).join("")}</ul>
+    <h3>${t("build")}</h3>
+    <div class="prompt"><pre id="promptText">${stop.prompt.replace(/&/g,"&amp;").replace(/</g,"&lt;")}</pre></div>
+    <p class="prompt-note">${t("promptNote")}</p>
+    <div class="panel-actions">
+      <button type="button" class="btn btn-primary${isDone ? " is-done" : ""}" id="toggleDone">${isDone ? t("markUndone") : t("markDone")}</button>
+      <button type="button" class="btn" id="copyPrompt">${t("copy")}</button>
+    </div>`;
+
+  panel.querySelector("#toggleDone").addEventListener("click", () => {
+    done.has(stop.id) ? done.delete(stop.id) : done.add(stop.id);
+    save(); renderAll();
+  });
+  panel.querySelector("#copyPrompt").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    try{ await navigator.clipboard.writeText(stop.prompt); }
+    catch(err){
+      const ta = document.createElement("textarea");
+      ta.value = stop.prompt; document.body.appendChild(ta); ta.select();
+      document.execCommand("copy"); ta.remove();
+    }
+    btn.textContent = t("copied");
+    setTimeout(() => { btn.textContent = t("copy"); }, 1400);
+  });
+}
+
+function renderMeter(){
+  const total = STOPS.length;
+  const n = STOPS.filter(s => done.has(s.id)).length;
+  const bars = LINES.map(line => {
+    const list = stopsOf(line.id);
+    const c = list.filter(s => done.has(s.id)).length;
+    const pct = Math.round(c / list.length * 100);
+    return `<span class="bar" style="--line:var(--l-${line.id})">
+      <span class="dot"></span>${line.name[lang]}
+      <span class="track"><span class="fill" style="width:${pct}%"></span></span>
+      <span style="font-variant-numeric:tabular-nums">${c}/${list.length}</span>
+    </span>`;
+  }).join("");
+  meter.innerHTML = `<span class="meter-count">${n} <span>${t("of")} ${total} ${t("stops")} ${t("done")}</span></span>
+                     <span class="bars">${bars}</span>`;
+}
+
+function renderChrome(){
+  document.documentElement.lang = lang === "fa" ? "fa" : "en";
+  document.documentElement.dir = lang === "fa" ? "rtl" : "ltr";
+  document.title = UI[lang].title;
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    const k = el.getAttribute("data-i18n");
+    if(k === "legend") el.innerHTML = t(k); else el.textContent = t(k);
+  });
+  document.querySelectorAll("[data-lang]").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+}
+
+function renderAll(){ renderChrome(); renderMeter(); renderMap(); renderPanel(); }
+
+document.querySelectorAll("[data-lang]").forEach(b =>
+  b.addEventListener("click", () => { lang = b.dataset.lang; save(); renderAll(); }));
+document.getElementById("reset").addEventListener("click", () => {
+  done.clear(); save(); renderAll();
+});
+window.addEventListener("resize", () => requestAnimationFrame(drawWires));
+new ResizeObserver(() => drawWires()).observe(document.getElementById("map"));
+
+renderAll();
+</script>
+</body>
+</html>

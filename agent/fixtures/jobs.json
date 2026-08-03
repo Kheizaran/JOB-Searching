@@ -1,0 +1,62 @@
+[
+  {
+    "source": "fixtures",
+    "external_id": "fx-001",
+    "title": "Senior Data Engineer",
+    "company": "Cartography Labs",
+    "location": "Berlin, Germany",
+    "remote": "hybrid",
+    "url": "https://example.com/jobs/fx-001",
+    "description": "We are looking for a Senior Data Engineer to own our batch platform. You will work in Python and SQL, run Airflow, and model the warehouse in dbt. Must have: 5+ years building production data pipelines, strong SQL, experience with a cloud warehouse (BigQuery or Snowflake). Nice to have: Kubernetes, streaming experience with Kafka. The team ships analytics for 4 million monthly users and is currently fighting a nightly job that fails twice a week.",
+    "salary_raw": "€75,000 – €95,000",
+    "posted_at": null
+  },
+  {
+    "source": "fixtures",
+    "external_id": "fx-002",
+    "title": "Analytics Engineer",
+    "company": "Sable Health",
+    "location": "Remote (Europe)",
+    "remote": "remote",
+    "url": "https://example.com/jobs/fx-002",
+    "description": "Analytics Engineer to build the semantic layer for our clinical reporting product. Stack: dbt, Snowflake, Python, Looker. You will partner with clinicians to turn messy source systems into models people trust. Must have: dbt in production, advanced SQL, an eye for data quality. Nice to have: healthcare data, dagster.",
+    "salary_raw": "€68,000 – €80,000",
+    "posted_at": null
+  },
+  {
+    "source": "fixtures",
+    "external_id": "fx-003",
+    "title": "Machine Learning Engineer, Ranking",
+    "company": "Tidewater",
+    "location": "Amsterdam, Netherlands",
+    "remote": null,
+    "url": "https://example.com/jobs/fx-003",
+    "description": "Join the ranking team. You will own feature pipelines and model serving for the recommendation surface. Must have: Python, experience shipping ML models to production, comfort with large-scale data processing (Spark or Flink). Nice to have: ranking or search background, Kubernetes. We serve 30k requests per second at peak.",
+    "salary_raw": null,
+    "posted_at": null
+  },
+  {
+    "source": "fixtures",
+    "external_id": "fx-004",
+    "title": "Sales Development Representative",
+    "company": "Tidewater",
+    "location": "Amsterdam, Netherlands",
+    "remote": null,
+    "url": "https://example.com/jobs/fx-004",
+    "description": "Outbound sales role. Commission only for the first six months.",
+    "salary_raw": null,
+    "posted_at": null
+  },
+  {
+    "source": "fixtures",
+    "external_id": "fx-005",
+    "title": "Senior Data Engineer",
+    "company": "Cartography Labs",
+    "location": "Berlin, Germany",
+    "remote": "hybrid",
+    "url": "https://example.com/jobs/fx-005-duplicate",
+    "description": "Duplicate of fx-001 as it appears on a second board — the deduper should collapse this one.",
+    "salary_raw": "€75,000 – €95,000",
+    "posted_at": null
+  }
+]

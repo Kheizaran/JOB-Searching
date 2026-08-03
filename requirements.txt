@@ -1,0 +1,5 @@
+# Everything except the model client is stdlib.
+anthropic>=0.40
+
+# Optional, only for the PDF stop (20.4):
+# weasyprint>=62

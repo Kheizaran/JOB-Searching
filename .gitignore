@@ -1,0 +1,15 @@
+# secrets and personal data — never commit these
+.env
+agent/config/preferences.json
+agent/config/resume.md
+data/connections.csv
+
+# generated
+data/tracker.db
+data/cache/
+data/logs/
+data/digests/
+data/applications/
+__pycache__/
+*.pyc
+.venv/

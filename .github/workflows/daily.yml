@@ -1,0 +1,49 @@
+name: Daily job search
+
+on:
+  schedule:
+    - cron: "0 5 * * 1-5"   # 07:00 Berlin (UTC+2) on weekdays — adjust for your timezone
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r requirements.txt
+
+      # The tracker is state, not source — keep it in the cache, not in git.
+      - uses: actions/cache@v4
+        with:
+          path: data/tracker.db
+          key: tracker-${{ github.run_id }}
+          restore-keys: tracker-
+
+      - name: Write personal config from secrets
+        env:
+          PREFERENCES_JSON: ${{ secrets.PREFERENCES_JSON }}
+          RESUME_MD: ${{ secrets.RESUME_MD }}
+        run: |
+          printf '%s' "$PREFERENCES_JSON" > agent/config/preferences.json
+          printf '%s' "$RESUME_MD"        > agent/config/resume.md
+
+      - name: Run the pipeline
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python3 -m agent.run_daily
+
+      - name: Publish today's digest
+        run: |
+          git config user.name  "job-search-agent"
+          git config user.email "actions@github.com"
+          git add -f data/digests/
+          git commit -m "digest: $(date -u +%F)" || echo "nothing new today"
+          git push

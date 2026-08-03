@@ -1,0 +1,36 @@
+{
+  "_comment": "Copy to preferences.json and edit. preferences.json is gitignored.",
+
+  "target_titles": [
+    "data engineer",
+    "analytics engineer",
+    "machine learning engineer",
+    "ai engineer"
+  ],
+  "exclude_title_keywords": ["intern", "internship", "principal", "director", "sales"],
+  "seniority": "mid to senior",
+
+  "locations": ["berlin", "amsterdam", "remote europe"],
+  "remote_only": false,
+  "work_authorisation": "EU work permit required — sponsorship welcome",
+
+  "salary_floor_eur": 65000,
+  "exclude_keywords": ["unpaid", "commission only", "must relocate at own cost"],
+
+  "max_age_days": 21,
+  "score_threshold": 72,
+  "daily_shortlist_size": 10,
+
+  "sources": [
+    { "type": "greenhouse", "board": "airbyte" },
+    { "type": "lever", "company": "matillion" },
+    { "type": "ashby", "company": "ramp" },
+    { "type": "remoteok" }
+  ],
+
+  "outreach": {
+    "max_followups": 2,
+    "followup_days": [4, 11],
+    "cooldown_days_per_contact": 30
+  }
+}
