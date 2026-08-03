@@ -2,6 +2,7 @@
 .env
 agent/config/preferences.json
 agent/config/resume.md
+agent/config/snippets.json
 data/connections.csv
 
 # generated

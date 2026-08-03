@@ -10,7 +10,18 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from . import llm, review, store, tailor
+from . import llm, render, review, store, tailor
+
+
+def prepare(job_ref: str) -> str:
+    """Tailor the documents, then render the PDF. A missing PDF engine is a
+    warning, not a failure — the Markdown is still reviewable."""
+    folder = tailor.prepare(job_ref)
+    try:
+        render.render(job_ref)
+    except SystemExit as exc:
+        print(f"  ! pdf skipped — {exc}")
+    return folder
 
 
 def show_queue() -> None:
@@ -66,14 +77,23 @@ if __name__ == "__main__":
     p = sub.add_parser("review"); p.add_argument("job_id"); p.add_argument("--open", action="store_true")
     p = sub.add_parser("submit"); p.add_argument("job_id")
     p.add_argument("--portal", default=""); p.add_argument("--confirmation", default="")
+    p = sub.add_parser("replied"); p.add_argument("job_id")
     args = ap.parse_args()
 
     if args.cmd == "list":
         show_queue()
     elif args.cmd == "prepare":
         llm.set_offline(args.dry_run)
-        tailor.prepare(args.job_id)
+        prepare(args.job_id)
     elif args.cmd == "review":
         review.show(args.job_id, open_url=args.open)
+    elif args.cmd == "replied":
+        with store.connect() as conn:
+            job = store.get_job(conn, args.job_id)
+            if not job:
+                raise SystemExit(f"No job matching {args.job_id}")
+            store.upsert_application(conn, job["id"], status="replied")
+            store.set_status(conn, job["id"], "replied")
+            print(f"  replied: {job['title']} — {job['company']} (follow-ups stop here)")
     else:
         submit(args.job_id, args.portal, args.confirmation)

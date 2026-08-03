@@ -390,7 +390,7 @@ const STOPS = [
   { id:"f5", line:"forge", code:"20.5",
     title:{en:"Cover letter + screening answers", fa:"کاورلتر و پاسخ سؤالات"},
     blurb:{en:"Three paragraphs, and reusable answers to the usual questions.", fa:"سه پاراگراف، به‌علاوه پاسخ‌های قابل‌استفاده برای سؤالات رایج."},
-    files:["agent/jobsearch/letter.py"],
+    files:["agent/jobsearch/tailor.py","agent/config/snippets.example.json"],
     check:{
       en:["Why this company (specific), why me (evidence), what I'd do first","A snippets file: notice period, salary expectation, visa, relocation","Nothing in it contradicts the resume"],
       fa:["چرا این شرکت (مشخص)، چرا من (شواهد)، اولین کاری که می‌کنم","فایل پاسخ‌های آماده: زمان شروع، انتظار حقوق، ویزا، جابه‌جایی","هیچ چیزی با رزومه در تضاد نیست"]
@@ -412,7 +412,7 @@ const STOPS = [
   { id:"d2", line:"dispatch", code:"30.2",
     title:{en:"Draft the form answers", fa:"پیش‌نویس پاسخ فرم‌ها"},
     blurb:{en:"Long free-text questions answered ahead of time, in your voice.", fa:"پاسخ سؤالات تشریحی، از قبل و با لحن خودتان."},
-    files:["agent/jobsearch/queue.py","data/applications/"],
+    files:["agent/jobsearch/tailor.py","agent/config/snippets.example.json"],
     check:{
       en:["Answers saved as answers.md next to the resume, ready to paste","Each answer stays under the site's character limit","Voice matches your own writing, not generic AI phrasing"],
       fa:["پاسخ‌ها در answers.md کنار رزومه، آماده کپی","هر پاسخ زیر محدودیت کاراکتر سایت","لحن شبیه نوشته خودتان، نه عبارات کلیشه‌ای"]
@@ -454,7 +454,7 @@ const STOPS = [
   { id:"b1", line:"bridge", code:"40.1",
     title:{en:"Find the hiring manager", fa:"پیداکردن مدیر استخدام"},
     blurb:{en:"Who owns this role — not the recruiter inbox.", fa:"صاحب واقعی این نقش — نه صندوق ورودی ریکروتر."},
-    files:["agent/jobsearch/contacts.py"],
+    files:["agent/jobsearch/outreach.py"],
     check:{
       en:["Two names per job: the likely hiring manager and one teammate","Sourced from the posting, the company site, or LinkedIn search you run","LinkedIn is used by you in the browser — the agent prepares the query"],
       fa:["برای هر شغل دو نفر: مدیر استخدام احتمالی و یک هم‌تیمی","از خود آگهی، سایت شرکت، یا جست‌وجوی لینکدینی که خودتان اجرا می‌کنید","لینکدین را خودتان در مرورگر باز می‌کنید — ایجنت فقط کوئری را می‌سازد"]
@@ -464,7 +464,7 @@ const STOPS = [
   { id:"b2", line:"bridge", code:"40.2",
     title:{en:"Verify before you write", fa:"تأیید قبل از نوشتن"},
     blurb:{en:"Right person, right team, still employed there.", fa:"آدم درست، تیم درست، هنوز همان‌جا شاغل."},
-    files:["agent/jobsearch/contacts.py"],
+    files:["agent/jobsearch/outreach.py"],
     check:{
       en:["Title, team and tenure confirmed from their public profile","One specific hook: a post, a talk, a shipped feature, a shared background","No contact gets a message without a hook"],
       fa:["عنوان، تیم و سابقه از پروفایل عمومی تأیید شده","یک نکته مشخص: پست، سخنرانی، محصول، یا سابقه مشترک","بدون آن نکته، برای کسی پیام نوشته نمی‌شود"]
@@ -494,7 +494,7 @@ const STOPS = [
   { id:"b5", line:"bridge", code:"40.5",
     title:{en:"Referrals and warm paths", fa:"معرفی و مسیرهای گرم"},
     blurb:{en:"Second-degree connections beat cold messages every time.", fa:"ارتباط درجه‌دو همیشه از پیام سرد بهتر جواب می‌دهد."},
-    files:["agent/jobsearch/contacts.py"],
+    files:["agent/jobsearch/outreach.py","data/connections.csv"],
     check:{
       en:["For each target company, list who you already know there","A short, easy-to-forward referral ask drafted per person","Referred applications tracked separately — watch the reply rate"],
       fa:["برای هر شرکت هدف، فهرست کسانی که از قبل می‌شناسید","یک درخواست معرفی کوتاه و قابل‌فوروارد برای هر نفر","اپلیکیشن‌های با معرفی جدا ثبت می‌شوند — نرخ پاسخ را ببینید"]

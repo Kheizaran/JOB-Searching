@@ -9,7 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -187,6 +187,36 @@ def add_message(conn: sqlite3.Connection, contact_id: str, jid: str, channel: st
     )
     conn.commit()
     return cur.lastrowid
+
+
+def set_contact_status(conn: sqlite3.Connection, contact_id: str, status: str) -> sqlite3.Row | None:
+    contact = conn.execute(
+        "SELECT * FROM contacts WHERE id LIKE ?", (contact_id + "%",)
+    ).fetchone()
+    if not contact:
+        return None
+    conn.execute("UPDATE contacts SET status=? WHERE id=?", (status, contact["id"]))
+    if status == "messaged":
+        conn.execute(
+            "UPDATE messages SET status='sent', sent_at=? WHERE contact_id=? AND status='draft'",
+            (now(), contact["id"]),
+        )
+    conn.commit()
+    return contact
+
+
+def recent_contact_conflict(conn: sqlite3.Connection, name: str, job_id: str, days: int) -> str | None:
+    """Has this person already been messaged about a different role recently?"""
+    if not name:
+        return None
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat(timespec="seconds")
+    row = conn.execute(
+        "SELECT m.created_at, j.title FROM messages m "
+        "JOIN contacts c ON c.id = m.contact_id LEFT JOIN jobs j ON j.id = m.job_id "
+        "WHERE c.name = ? AND m.job_id != ? AND m.created_at > ? LIMIT 1",
+        (name, job_id, cutoff),
+    ).fetchone()
+    return f"{row['title']} on {row['created_at'][:10]}" if row else None
 
 
 def status_report(conn: sqlite3.Connection) -> str:

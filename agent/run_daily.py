@@ -13,10 +13,15 @@ import sys
 import traceback
 from datetime import date
 
-from agent.jobsearch import digest, llm, scrape, score, store
+from agent.jobsearch import digest, followup, llm, scrape, score, store
 from agent.jobsearch.config import LOGS_DIR
 
-STAGES = [("scrape", scrape.run), ("score", score.run), ("digest", digest.run)]
+STAGES = [
+    ("scrape", scrape.run),
+    ("score", score.run),
+    ("digest", digest.run),
+    ("followup", followup.run),
+]
 
 
 def main() -> int:

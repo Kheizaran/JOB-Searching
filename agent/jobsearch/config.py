@@ -36,6 +36,11 @@ def load_resume() -> str:
     return _pick("resume.md").read_text()
 
 
+def load_snippets() -> dict:
+    """Standard answers reused verbatim across applications."""
+    return json.loads(_pick("snippets.json").read_text())
+
+
 def resume_summary(limit: int = 6000) -> str:
     """Resume text trimmed to keep scoring calls cheap."""
     return load_resume()[:limit]

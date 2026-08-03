@@ -33,11 +33,19 @@ through the whole pipeline:
 
 ```bash
 python3 -m agent.jobsearch.digest  --approve <id>          # from the digest
-python3 -m agent.jobsearch.queue   prepare <id> --dry-run  # resume + letter + evidence map
+python3 -m agent.jobsearch.queue   prepare <id> --dry-run  # resume + letter + answers + PDF
 python3 -m agent.jobsearch.outreach find <id> --dry-run    # who to reach, and the searches
+python3 -m agent.jobsearch.outreach referrals <id>         # who you already know there
 python3 -m agent.jobsearch.queue   review <id>             # the human gate
+python3 -m agent.jobsearch.queue   submit <id>             # after you clicked submit yourself
+python3 -m agent.jobsearch.followup --dry-run              # what is due to be nudged today
 python3 -m agent.jobsearch.queue   list                    # where everything stands
 ```
+
+You tell the tracker what you did in the world — `queue submit`, `queue replied`,
+`outreach sent <contact>`, `outreach replied <contact>` — and the ladders react:
+any reply stops the follow-ups immediately, and each ladder caps at two rungs
+before closing itself out.
 
 ## Make it yours
 
@@ -45,6 +53,7 @@ python3 -m agent.jobsearch.queue   list                    # where everything st
 cp .env.example .env                                        # add ANTHROPIC_API_KEY
 cp agent/config/preferences.example.json agent/config/preferences.json
 cp agent/config/resume.example.md        agent/config/resume.md
+cp agent/config/snippets.example.json    agent/config/snippets.json
 pip install -r requirements.txt
 python3 -m agent.run_daily
 ```
@@ -83,12 +92,16 @@ writes the message; you open the browser and press send.
 
 ## Building the rest with Claude Code
 
-Every stop on the map carries a prompt. Open the map, click a stop, copy the
-prompt, paste it into Claude Code inside this repo — `CLAUDE.md` gives it the
-rules it needs to stay inside the lines. What's already implemented: the whole of
-Setup, Job Radar, the tailoring pass, the queue, the human gate, and the outreach
-drafts. Left as prompts: the ATS-safe PDF renderer (20.4), screening-answer
-snippets (30.2), the follow-up ladders (30.5 / 40.4), and referral matching (40.5).
+All 23 stops are implemented — the map is how you read the system, not a list of
+homework. Every stop still carries the prompt that produced it, so when you want a
+stop to work differently, click it, edit the prompt, and paste it into Claude Code
+inside this repo. `CLAUDE.md` gives Claude the rules it needs to stay inside the
+lines: no auto-submit, no invented experience, no LinkedIn scraping.
+
+Good first changes: swap the `sources` list for the companies you actually want
+(10.1), raise `score_threshold` until the digest is 5 roles instead of 15 (10.3),
+and rewrite the `## Story bank` in your own resume until every line has a number in
+it (00.2). That last one improves the output of everything downstream.
 
 ---
 
